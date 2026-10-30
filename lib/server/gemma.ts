@@ -329,7 +329,14 @@ export async function* streamDebate(
       }
       break;
     } catch (err) {
-      if (signal?.aborted || lines.length > 0 || attempt === 1) throw err;
+      if (signal?.aborted) throw err;
+      // Google sometimes resets the stream after the lines are in (ECONNRESET).
+      // Keep a usable debate and fetch the scores with a separate call below.
+      if (lines.length >= 4) {
+        console.warn(`[debate] stream dropped after ${lines.length} lines; scoring separately`, err);
+        break;
+      }
+      if (lines.length > 0 || attempt === 1) throw err;
     }
   }
 
@@ -339,7 +346,13 @@ export async function* streamDebate(
     yield { type: "title", title };
   }
   // Scores occasionally get cut off; ask for them separately rather than inventing any.
-  rawScores ??= await scoreOnly(idea, lines, apiKey, signal);
+  for (let attempt = 0; !rawScores && attempt < 2; attempt++) {
+    try {
+      rawScores = await scoreOnly(idea, lines, apiKey, signal);
+    } catch (err) {
+      if (signal?.aborted || attempt === 1) throw err;
+    }
+  }
   if (!rawScores) throw new Error("Gemma did not return scores");
 
   yield { type: "debate", debate: assembleDebate(idea, title, lines, rawScores, "gemma", model) };
