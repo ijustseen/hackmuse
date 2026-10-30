@@ -10,7 +10,7 @@ import {
 } from "./prompt.ts";
 
 export async function reviewWithGemma(input: GemmaProjectInput): Promise<GemmaReview> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is missing.");
   }

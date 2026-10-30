@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
+/* HACKMUSE — neo-brutalist "courtroom" theme.
+   Paper and ink, hard offset shadows in blood red, coral for action,
+   deep teal for chrome, mustard for the Chair. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #f1ecdf;
+  --paper: #faf7ef;
+  --ink: #10201c;
+  --teal: #3d5e56;
+  --teal-deep: #1d3631;
+  --blood: #7b1a14;
+  --coral: #e8736a;
+  --coral-deep: #c9544b;
+  --mustard: #e9b949;
+  --sage: #c9d6cf;
+  --mint: #7fb3a5;
+  --lilac: #b9a6e8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-teal: var(--teal);
+  --color-teal-deep: var(--teal-deep);
+  --color-blood: var(--blood);
+  --color-coral: var(--coral);
+  --color-coral-deep: var(--coral-deep);
+  --color-mustard: var(--mustard);
+  --color-sage: var(--sage);
+  --color-mint: var(--mint);
+  --color-lilac: var(--lilac);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+
+  --shadow-brutal-sm: 4px 4px 0 0 var(--blood);
+  --shadow-brutal: 8px 8px 0 0 var(--blood);
+  --shadow-brutal-lg: 14px 14px 0 0 var(--blood);
+  --shadow-ink: 6px 6px 0 0 var(--ink);
+  --shadow-ink-sm: 3px 3px 0 0 var(--ink);
+
+  --animate-spin-slow: spin 18s linear infinite;
+  --animate-wiggle: wiggle 2.4s ease-in-out infinite;
+  --animate-blink: blink 1s steps(1) infinite;
+  --animate-dash: dash 1.2s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+@keyframes dash {
+  to { stroke-dashoffset: -24; }
+}
+@keyframes talk {
+  from { transform: scaleY(0.5); }
+  to { transform: scaleY(1.5); }
+}
+.judge-mouth-talk {
+  animation: talk 0.32s ease-in-out infinite alternate;
+}
+
+html {
+  background: var(--cream);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--coral);
+  color: var(--ink);
+}
+
+/* Lenis smooth scroll (https://github.com/darkroomengineering/lenis) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Custom cursor: hide the native one only on precise pointers once the
+   cursor component has mounted (it adds .has-custom-cursor). */
+@media (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+@layer utilities {
+  /* Halftone dots, like newsprint. */
+  .bg-halftone {
+    background-image: radial-gradient(var(--ink) 1px, transparent 1.4px);
+    background-size: 9px 9px;
+  }
+  /* Diagonal hatching for bars and stamps. */
+  .bg-hatch {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      currentColor 0 2px,
+      transparent 2px 7px
+    );
+  }
+  /* Graph-paper grid. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+  .text-outline {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--ink);
+  }
+  .text-outline-cream {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--cream);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
