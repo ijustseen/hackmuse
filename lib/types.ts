@@ -3,7 +3,7 @@ import type { CriterionId } from "./rubric";
 
 export interface DebateLine {
   speaker: JudgeId;
-  /** The judge this line answers, if any — drives the beam on the roundtable. */
+  /** The judge this line answers, if any (guides the writing; not drawn). */
   replyTo: JudgeId | null;
   /** One-word delivery cue ("skeptical", "excited"…). */
   cue: string;

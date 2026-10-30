@@ -74,7 +74,6 @@ function JudgeTile({
   id,
   active,
   speaking,
-  calledOut,
   vote,
   analyser,
   className,
@@ -82,7 +81,6 @@ function JudgeTile({
   id: JudgeId;
   active: boolean;
   speaking: boolean;
-  calledOut: boolean;
   vote: number | null;
   analyser: AnalyserNode | null;
   className?: string;
@@ -108,11 +106,6 @@ function JudgeTile({
       {active && (
         <span className="absolute right-1 top-1 bg-ink/85 px-1 py-0.5">
           <Waveform active={speaking} analyser={analyser} bars={5} className="h-3 [&>span]:bg-coral" />
-        </span>
-      )}
-      {calledOut && (
-        <span className="absolute left-1 top-1 border-2 border-ink bg-coral px-1 font-mono text-[8px] font-bold uppercase tracking-widest text-ink">
-          Called out
         </span>
       )}
       {vote != null && (
@@ -160,7 +153,6 @@ export function CallView({
   const tiles = JUDGE_ORDER.map((id) => ({
     id,
     active: line?.speaker === id && !done,
-    calledOut: !done && line?.replyTo === id,
     vote: done && id !== "chair" ? debate.votes[id] : null,
   }));
 
@@ -240,14 +232,6 @@ export function CallView({
                         {JUDGES[line.speaker].role} · {line.cue}
                       </p>
                     </div>
-                    {line.replyTo && (
-                      <div className="absolute right-4 top-4 flex items-center gap-2 border-[3px] border-ink bg-coral px-2 py-1 text-ink">
-                        <JudgeAvatar id={line.replyTo} className="w-7" />
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-widest">
-                          Answering {JUDGES[line.replyTo].short}
-                        </span>
-                      </div>
-                    )}
                   </motion.div>
                 ) : (
                   <motion.div

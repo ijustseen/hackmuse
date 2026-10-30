@@ -2,14 +2,15 @@ import { JUDGES, isJudgeId } from "@/lib/judges";
 
 const DEFAULT_MODEL = "eleven_multilingual_v2";
 
-// Per-judge voice tuning: the Shark is steadier, the Visionary more expressive.
+// Per-judge delivery, chosen to widen the gap between voices: high stability and
+// low style is flat and clipped, low stability and high style is animated.
 const VOICE_SETTINGS = {
-  chair: { stability: 0.6, similarity_boost: 0.8, style: 0.15 },
-  shark: { stability: 0.55, similarity_boost: 0.8, style: 0.3 },
-  builder: { stability: 0.5, similarity_boost: 0.75, style: 0.25 },
-  visionary: { stability: 0.35, similarity_boost: 0.75, style: 0.6 },
-  angel: { stability: 0.5, similarity_boost: 0.8, style: 0.35 },
-  operator: { stability: 0.55, similarity_boost: 0.8, style: 0.25 },
+  chair: { stability: 0.7, similarity_boost: 0.8, style: 0.1 }, // measured, even
+  shark: { stability: 0.8, similarity_boost: 0.85, style: 0.05 }, // flat, clipped
+  builder: { stability: 0.45, similarity_boost: 0.75, style: 0.3 }, // relaxed, conversational
+  visionary: { stability: 0.25, similarity_boost: 0.7, style: 0.75 }, // excitable, expressive
+  angel: { stability: 0.6, similarity_boost: 0.8, style: 0.4 }, // warm, unhurried
+  operator: { stability: 0.4, similarity_boost: 0.75, style: 0.5 }, // brisk, a bit impatient
 } as const;
 
 export async function POST(request: Request) {

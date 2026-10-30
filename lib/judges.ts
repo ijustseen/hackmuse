@@ -11,7 +11,7 @@ export interface Judge {
   /** Short name for tight spots (seats, chat). */
   short: string;
   role: string;
-  /** CSS colour for the judge's seat, tags, beams and avatar backdrop. */
+  /** CSS colour for the judge's seat, tags and avatar backdrop. */
   color: string;
   catchphrase: string;
   owns: CriterionId[];
@@ -21,7 +21,7 @@ export interface Judge {
   brief: string;
   /** What they post when they join the group chat while Gemma writes. */
   joinLine: string;
-  /** Default ElevenLabs premade voice; override per judge with ELEVENLABS_VOICE_<ID>. */
+  /** Default ElevenLabs premade voice (see the voice table below); override per judge with ELEVENLABS_VOICE_<ID>. */
   voiceId: string;
   voiceName: string;
 }
@@ -99,8 +99,8 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "an early-stage angel investor. Cares about the founders' unfair advantage, the story and whether someone would love this. Warm but probing.",
     joinLine: "Sorry, late. Who is the team?",
-    voiceId: "EXAVITQu4vr4xnSDxMaL",
-    voiceName: "Sarah",
+    voiceId: "XB0fDUnXU5powFXDhCwa",
+    voiceName: "Charlotte",
   },
   operator: {
     id: "operator",
@@ -114,10 +114,25 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "a former startup founder who ran growth. Cares about distribution, the first hundred users and what the launch looks like. Practical, a little impatient.",
     joinLine: "Here. Distribution is my question.",
-    voiceId: "JBFqnCBsd6RMkjVDRZzb",
-    voiceName: "George",
+    voiceId: "bIHbv24MWmeRgasZH58o",
+    voiceName: "Will",
   },
 };
+
+// Voice table: six premade ElevenLabs voices, spread across gender, accent and age.
+//   chair     Daniel     male    British, mature, broadcaster
+//   shark     Brian      male    American, deep, older, resonant
+//   builder   Charlie    male    Australian, young, casual
+//   visionary Jessica    female  American, young, expressive
+//   angel     Charlotte  female  English-Swedish, mature, warm
+//   operator  Will       male    American, young, upbeat
+// Delivery is pushed apart further by VOICE_SETTINGS in app/api/tts/route.ts.
+const seenVoices = new Map<string, JudgeId>();
+for (const judge of Object.values(JUDGES)) {
+  const clash = seenVoices.get(judge.voiceId);
+  if (clash) throw new Error(`Judges ${clash} and ${judge.id} share ElevenLabs voice ${judge.voiceId}`);
+  seenVoices.set(judge.voiceId, judge.id);
+}
 
 /** Seating order: the Chair first (head of the table), then clockwise. */
 export const JUDGE_ORDER: JudgeId[] = ["chair", "shark", "builder", "angel", "visionary", "operator"];

@@ -31,11 +31,6 @@ export function Caption({
             <div className="flex flex-wrap items-center gap-2 border-b-[3px] border-ink px-4 py-2" style={{ backgroundColor: JUDGES[line.speaker].color }}>
               <span className="font-display text-2xl font-black uppercase leading-none">{JUDGES[line.speaker].name}</span>
               <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-ink/70">— {line.cue}</span>
-              {line.replyTo && (
-                <span className="ml-auto border-2 border-ink bg-paper px-1.5 font-mono text-[10px] font-bold uppercase tracking-wider">
-                  ↳ to {JUDGES[line.replyTo].name}
-                </span>
-              )}
             </div>
             <TypedText text={line.text} progress={progress} />
           </motion.div>

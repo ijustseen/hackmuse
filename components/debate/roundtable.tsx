@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 
 // Seats sit evenly around the table, the Chair at the head (north), clockwise.
 const SEAT_RADIUS = 39;
-const BEAM_RADIUS = 26;
 /** The table is 40% of the stage wide, so its rim sits 20% from the centre. */
 const TABLE_RADIUS = 20;
 
@@ -23,21 +22,6 @@ const SEATS = Object.fromEntries(
     return [id, { angle, x: 50 + Math.cos(a) * SEAT_RADIUS, y: 50 + Math.sin(a) * SEAT_RADIUS }];
   }),
 ) as Record<JudgeId, { angle: number; x: number; y: number }>;
-
-function onRim(angle: number) {
-  const a = (angle * Math.PI) / 180;
-  return { x: 50 + Math.cos(a) * BEAM_RADIUS, y: 50 + Math.sin(a) * BEAM_RADIUS };
-}
-
-/** A reply travels along the table's rim from speaker to target, never across it. */
-function beamPath(from: JudgeId, to: JudgeId) {
-  const a = onRim(SEATS[from].angle);
-  const b = onRim(SEATS[to].angle);
-  let delta = SEATS[to].angle - SEATS[from].angle;
-  delta = ((((delta % 360) + 540) % 360) - 180); // shortest signed turn
-  const sweep = delta >= 0 ? 1 : 0;
-  return `M ${a.x} ${a.y} A ${BEAM_RADIUS} ${BEAM_RADIUS} 0 0 ${sweep} ${b.x} ${b.y}`;
-}
 
 export function Roundtable({
   title,
@@ -139,41 +123,10 @@ export function Roundtable({
         </motion.div>
       </motion.div>
 
-      {/* Reply beam: runs along the rim from the speaker to the judge they answer */}
-      <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 z-[5] h-full w-full overflow-visible" aria-hidden>
-        <AnimatePresence>
-          {line?.replyTo && !done && (
-            <motion.g key={`beam-${index}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.path
-                d={beamPath(line.speaker, line.replyTo)}
-                fill="none"
-                stroke="var(--ink)"
-                strokeWidth={2.6}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.7, ease: "easeOut" }}
-              />
-              <motion.path
-                d={beamPath(line.speaker, line.replyTo)}
-                fill="none"
-                stroke={JUDGES[line.speaker].color}
-                strokeWidth={1.3}
-                strokeDasharray="3 3"
-                className="animate-dash"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.7, ease: "easeOut" }}
-              />
-            </motion.g>
-          )}
-        </AnimatePresence>
-      </svg>
-
       {/* Seats */}
       {JUDGE_ORDER.map((id, i) => {
         const judge = JUDGES[id];
         const isActive = active === id && !done;
-        const isTarget = !done && line?.replyTo === id;
         const vote = done && id !== "chair" ? verdict?.votes[id] : null;
         if (present && !present.includes(id)) {
           return (
@@ -193,7 +146,7 @@ export function Roundtable({
             style={{ left: `${SEATS[id].x}%`, top: `${SEATS[id].y}%`, x: "-50%" }}
             initial={{ opacity: 0, scale: 0.6, y: "-50%" }}
             animate={{
-              opacity: deliberating ? 0.75 : active && !isActive && !isTarget && !done ? 0.55 : 1,
+              opacity: deliberating ? 0.75 : active && !isActive && !done ? 0.55 : 1,
               scale: isActive ? 1.1 : 1,
               y: isActive ? "-58%" : "-50%",
             }}
@@ -237,16 +190,6 @@ export function Roundtable({
                     className="absolute -right-3 -top-4 border-2 border-ink bg-ink px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-widest text-cream"
                   >
                     {speaking ? "● Speaking" : "…"}
-                  </motion.span>
-                )}
-                {isTarget && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute -left-3 -top-4 border-2 border-ink bg-coral px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-widest"
-                  >
-                    Called out
                   </motion.span>
                 )}
               </AnimatePresence>
