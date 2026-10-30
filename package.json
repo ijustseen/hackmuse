@@ -9,8 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
-    "lint": "eslint",
-    "test:gemma": "node --env-file-if-exists=.env.local --env-file-if-exists=../.env.local --experimental-strip-types api/aiConnection/testGemma.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
