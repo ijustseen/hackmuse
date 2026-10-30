@@ -1,5 +1,7 @@
 # HACKMUSE
 
+[https://www.youtube.com/watch?v=ZD1LJbs0lBY] video
+
 Put your hackathon idea on trial. Pitch it in a few sentences; four AI judges sit down at a round table, argue about it out loud, and hand you a weighted score with the strengths to lean on and the risks to fix.
 
 - **Debate + scores:** Gemma 4 (`gemma-4-26b-a4b-it`) via Google AI Studio, streamed line by line
