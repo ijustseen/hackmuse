@@ -20,5 +20,6 @@ Without keys it still runs: no Gemma key → clearly labelled demo debate; no El
 
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — what we decided and why
 - [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md) — what's built, how a debate flows, what's verified, gotchas
+- [`docs/LOVABLE_PRESENTATION_PROMPT.md`](docs/LOVABLE_PRESENTATION_PROMPT.md) — paste-ready Lovable prompt for the pitch deck (same design system)
 
 Built at Hacktoberfest Hack Day Linz, 2026.
