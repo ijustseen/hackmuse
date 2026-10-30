@@ -17,32 +17,84 @@ export async function reviewWithGemma(input: GemmaProjectInput): Promise<GemmaRe
 
   const model = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model,
-    contents: buildGemmaPrompt(input),
-    config: {
-      tools: [{ googleSearch: {} }],
-      temperature: 0.2,
-      maxOutputTokens: 8_000,
-    },
-  });
+  const search = await findSimilarProjects(ai, model, input);
+  const response = await generateScoring(ai, model, buildGemmaPrompt(input, search?.notes ?? null));
 
   const text = response.text ?? "";
-  const grounding = response.candidates?.[0]?.groundingMetadata;
-  const sources = groundingSources(grounding);
-  const queries = grounding?.webSearchQueries?.filter((query): query is string => typeof query === "string") ?? [];
   const parsed = parseReview(text);
 
   return {
     model,
     parsed: parsed.ok,
+    search: search ? "returned" : "unavailable",
     missing: parsed.missing,
     criteria: parsed.criteria,
     similarProjects: parsed.similarProjects,
-    sources,
-    queries,
+    sources: search?.sources ?? [],
+    queries: search?.queries ?? [],
     rawText: parsed.ok ? null : text || null,
   };
+}
+
+async function findSimilarProjects(ai: GoogleGenAI, model: string, input: GemmaProjectInput) {
+  const contents = `Use Google Search to find a few previous hackathon projects similar to this idea. Prefer Devpost, official hackathon pages, and GitHub. List only projects and URLs the search actually returned.\n\n${input.projectIdea.slice(0, 700)}`;
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents,
+      config: {
+        tools: [{ googleSearch: {} }],
+        maxOutputTokens: 1_024,
+      },
+    });
+    const grounding = response.candidates?.[0]?.groundingMetadata;
+    return {
+      notes: response.text?.trim() || null,
+      sources: groundingSources(grounding),
+      queries: grounding?.webSearchQueries?.filter((query): query is string => typeof query === "string") ?? [],
+    };
+  } catch (error) {
+    if (isTransient(error)) return null;
+    throw error;
+  }
+}
+
+async function generateScoring(ai: GoogleGenAI, model: string, contents: string) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          temperature: 0.2,
+          maxOutputTokens: 8_000,
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      if (!isTransient(error) || attempt === 1) throw error;
+      await delay(1_500);
+    }
+  }
+  throw lastError;
+}
+
+function isTransient(error: unknown): boolean {
+  const status = errorStatus(error);
+  if (status === 429 || status === 500 || status === 503) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("INTERNAL") || message.includes("UNAVAILABLE") || message.includes("RESOURCE_EXHAUSTED");
+}
+
+function errorStatus(error: unknown): number | null {
+  if (!error || typeof error !== "object" || !("status" in error)) return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" ? status : null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function groundingSources(grounding: { groundingChunks?: Array<{ web?: { title?: string; uri?: string } | null }> } | undefined): GemmaSource[] {

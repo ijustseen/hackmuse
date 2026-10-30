@@ -39,6 +39,7 @@ export type GemmaSource = {
 export type GemmaReview = {
   model: string;
   parsed: boolean;
+  search: "returned" | "unavailable";
   missing: string | null;
   criteria: GemmaCriterionReview[];
   similarProjects: GemmaSimilarProject[];
@@ -58,13 +59,15 @@ export const sampleProject: GemmaProjectInput = {
 
 const criterionLines = gemmaCriteria.map((criterion) => `- ${criterion.id}`).join("\n");
 
-export function buildGemmaPrompt(input: GemmaProjectInput): string {
+export function buildGemmaPrompt(input: GemmaProjectInput, searchNotes: string | null): string {
+  const evidence = searchNotes
+    ? `Similar projects found by a separate Google Search call. Use only these notes and their URLs. Never invent projects, awards, placements, or URLs.\n\n${searchNotes}`
+    : "No live search results are available. Do not invent projects, awards, placements, or URLs. Say that the search results are missing.";
+
   return `
 You are HackMuse. Evaluate the hackathon project idea below.
 
-First, use Google Search to find a few relevant previous hackathon projects and
-verified winners or finalists. Prefer official hackathon pages, Devpost, and
-GitHub. Never invent projects, awards, placements, or URLs.
+${evidence}
 
 Then score these criteria independently from 0 to 100:
 ${criterionLines}

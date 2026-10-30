@@ -122,7 +122,10 @@ export function RealBoard() {
 function ReviewResult({ review }: { review: GemmaReview }) {
   return (
     <section className="flex flex-col gap-6" aria-live="polite">
-      <p className="text-sm text-[#6b645c]">Model {review.model}</p>
+      <p className="text-sm text-[#6b645c]">
+        Model {review.model}
+        {review.search === "unavailable" ? ". Live search did not return, so the scores do not use fresh results." : ""}
+      </p>
       {review.missing ? (
         <p className="rounded-2xl border border-[#ddd4c6] px-4 py-3 text-sm leading-6">{review.missing}</p>
       ) : null}

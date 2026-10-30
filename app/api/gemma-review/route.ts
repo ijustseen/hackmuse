@@ -39,6 +39,13 @@ function publicFailure(error: unknown): { status: number; code: string; message:
   if (message.includes("GEMINI_API_KEY is missing")) {
     return { status: 500, code: "missing_key", message: "GEMINI_API_KEY is not set on the server." };
   }
+  if (message.includes("Internal error encountered") || message.includes("\"INTERNAL\"")) {
+    return {
+      status: 502,
+      code: "gemma_unavailable",
+      message: "Google returned an internal error for Gemma. The request itself is fine. Wait a few seconds and try again.",
+    };
+  }
   if (message.includes("API_KEY_INVALID") || message.includes("API key not valid")) {
     return {
       status: 502,
