@@ -6,7 +6,7 @@ import { Magnetic } from "@/components/effects/magnetic";
 import { BrutalButton } from "@/components/ui/brutal-button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { useTypewriter } from "@/components/ui/typewriter";
-import { MAX_IDEA, MIN_IDEA, SAMPLE_IDEAS, saveIdea } from "@/lib/idea";
+import { DEFAULT_HACKATHON, MAX_IDEA, MAX_RULES, MIN_IDEA, SAMPLE_IDEAS, saveIdea } from "@/lib/idea";
 import { cn } from "@/lib/utils";
 
 export function IdeaForm() {
@@ -15,6 +15,9 @@ export function IdeaForm() {
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [hackathonUrl, setHackathonUrl] = useState(DEFAULT_HACKATHON.hackathonUrl);
+  const [rules, setRules] = useState(DEFAULT_HACKATHON.rules);
+  const [showHackathon, setShowHackathon] = useState(false);
   const phrases = useMemo(() => SAMPLE_IDEAS.slice(0, 5), []);
   const placeholder = useTypewriter(phrases);
   const chips = SAMPLE_IDEAS.slice(5);
@@ -27,8 +30,13 @@ export function IdeaForm() {
       setError(`Give the judges a bit more — at least ${MIN_IDEA} characters.`);
       return;
     }
+    if (!/^https?:\/\/\S+$/i.test(hackathonUrl.trim()) || !rules.trim()) {
+      setShowHackathon(true);
+      setError("Add the hackathon page (http/https link) and its rules.");
+      return;
+    }
     setSubmitting(true);
-    saveIdea(idea.trim());
+    saveIdea(idea.trim(), { hackathonUrl: hackathonUrl.trim(), rules: rules.trim() });
     router.push("/debate");
   }
 
@@ -112,6 +120,55 @@ export function IdeaForm() {
                 {c}
               </button>
             ))}
+          </div>
+
+          <div className="mt-5 border-[3px] border-ink bg-cream">
+            <button
+              type="button"
+              data-cursor={showHackathon ? "close" : "edit"}
+              aria-expanded={showHackathon}
+              onClick={() => setShowHackathon((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left font-mono text-[11px] font-bold uppercase tracking-wider"
+            >
+              <span className="truncate">
+                Pitched at:{" "}
+                <span className="text-ink/60">
+                  {hackathonUrl === DEFAULT_HACKATHON.hackathonUrl ? "Hacktoberfest Hack Day Linz" : hackathonUrl || "—"}
+                </span>
+              </span>
+              <span aria-hidden>{showHackathon ? "−" : "Edit +"}</span>
+            </button>
+            {showHackathon && (
+              <div className="space-y-3 border-t-[3px] border-ink p-4">
+                <label className="block">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider">Hackathon page</span>
+                  <input
+                    type="url"
+                    value={hackathonUrl}
+                    maxLength={2000}
+                    onChange={(e) => {
+                      setHackathonUrl(e.target.value);
+                      if (error) setError("");
+                    }}
+                    className="mt-1 block w-full border-[3px] border-ink bg-paper px-3 py-2 text-sm outline-none focus:bg-white"
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider">Rules, prizes, judging criteria</span>
+                  <textarea
+                    value={rules}
+                    maxLength={MAX_RULES}
+                    rows={5}
+                    onChange={(e) => {
+                      setRules(e.target.value);
+                      if (error) setError("");
+                    }}
+                    data-lenis-prevent
+                    className="mt-1 block w-full resize-y border-[3px] border-ink bg-paper p-3 text-sm leading-relaxed outline-none focus:bg-white"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">

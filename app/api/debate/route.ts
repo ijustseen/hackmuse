@@ -1,6 +1,6 @@
 import { MAX_IDEA, MIN_IDEA } from "@/lib/idea";
 import { streamDemo } from "@/lib/server/demo-debate";
-import { gemmaApiKey, streamDebate } from "@/lib/server/gemma";
+import { gemmaApiKey, streamDebate, type HackathonContext } from "@/lib/server/gemma";
 import type { StreamEvent } from "@/lib/types";
 
 // Streams the debate as NDJSON (one StreamEvent per line) so the room can start
@@ -8,10 +8,14 @@ import type { StreamEvent } from "@/lib/types";
 export async function POST(request: Request) {
   let idea = "";
   let demo = false;
+  let hackathon: HackathonContext | undefined;
   try {
     const body = await request.json();
     idea = typeof body?.idea === "string" ? body.idea.trim() : "";
     demo = body?.demo === true;
+    const url = typeof body?.hackathonUrl === "string" ? body.hackathonUrl.trim() : "";
+    const rules = typeof body?.rules === "string" ? body.rules.trim() : "";
+    if (url && rules) hackathon = { url: url.slice(0, 2000), rules };
   } catch {
     return Response.json({ error: "Body must be JSON: { idea: string }" }, { status: 400 });
   }
@@ -22,7 +26,7 @@ export async function POST(request: Request) {
 
   const apiKey = gemmaApiKey();
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(120_000)]);
-  const events = demo || !apiKey ? streamDemo(idea, signal) : streamDebate(idea, apiKey, signal);
+  const events = demo || !apiKey ? streamDemo(idea, signal) : streamDebate(idea, apiKey, signal, hackathon);
   const encoder = new TextEncoder();
 
   const body = new ReadableStream<Uint8Array>({

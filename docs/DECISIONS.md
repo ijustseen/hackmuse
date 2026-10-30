@@ -49,3 +49,12 @@ What we agreed before and during the build (hack day, 2026-10-30). Newest decisi
 | R2 | Font glyphs (§ $ # *) replaced by **drawn SVG avatars** (`components/judge-avatar.tsx`): square head + one prop each (wig, shark fin + shades, hard hat, halo, beret + glasses, headset). Centred by construction; the mouth animates while talking. | User disliked the logos and they weren't centred. |
 | R3 | **Waiting room = group chat** (`group-chat.tsx`): judges join one by one, type, post a one-liner; their seat at the table fills as they arrive. Playback starts once the panel has assembled (~7 s, "Skip intro" available); voice clips prefetch meanwhile. | User wanted a chat-style animation while waiting. |
 | R4 | **"Join the call"** after the verdict (`call-view.tsx`): a full-screen video-call that replays the debate. Speaker view — the "camera" whips in from the speaker's side of the table, slow push-in, name plate, live captions; filmstrip + "You" tile (optional local webcam, never uploaded); gallery view; Esc / Leave call. | User asked for a Zoom-style call where the camera turns to each investor. |
+
+## Round 3 (backend merge, same day)
+
+| # | Decision | Why |
+|---|----------|-----|
+| B1 | The app uses the teammate's **`/api/gemma-review`** for scoring; our `/api/debate` stays the show. They run in parallel. | The review has the real criteria and grounded similar-project search; the debate keeps the room talking within a second. |
+| B2 | Headline score = **plain average** of the review's 8 criteria (0–100). No weights. | The review prompt explicitly assigns none; the old weights belonged to the placeholder rubric. |
+| B3 | Hackathon URL + rules default to the Linz hack day and sit behind an "Edit" toggle. | Backend requires them; the demo should still be one field. |
+| B4 | `/api/evaluations` is left as is and not called from the UI. | Its live providers are unimplemented stubs. |

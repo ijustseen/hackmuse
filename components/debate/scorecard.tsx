@@ -7,13 +7,20 @@ import { JudgeAvatar } from "@/components/judge-avatar";
 import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
 import { JUDGES, VOTING_JUDGES } from "@/lib/judges";
 import { RUBRIC, gradeFor } from "@/lib/rubric";
+import type { GemmaReview, ReviewState } from "@/lib/review";
 import type { Debate } from "@/lib/types";
 
-function summary(d: Debate) {
+function summary(d: Debate, review: GemmaReview | null) {
   const grade = gradeFor(d.overall);
+  const criteria = review
+    ? review.criteria.map((c) => `• ${c.label}: ${c.score ?? "—"}/100 — ${c.explanation}`)
+    : RUBRIC.map((c) => `• ${c.label}: ${d.scores[c.id].score}/10 — ${d.scores[c.id].note}`);
   return [
     `HACKMUSE verdict — "${d.title}": ${d.overall}/100 (${grade.label})`,
-    ...RUBRIC.map((c) => `• ${c.label}: ${d.scores[c.id].score}/10 — ${d.scores[c.id].note}`),
+    ...criteria,
+    ...(review?.similarProjects.length
+      ? [`Similar projects: ${review.similarProjects.map((p) => (p.url ? `${p.name} (${p.url})` : p.name)).join("; ")}`]
+      : []),
     `Chair: ${d.verdict}`,
     d.strengths.length ? `Strengths: ${d.strengths.join("; ")}` : "",
     d.risks.length ? `Risks: ${d.risks.join("; ")}` : "",
@@ -24,13 +31,18 @@ function summary(d: Debate) {
 
 export function Scorecard({
   debate,
+  review,
+  onRetryReview,
   onReplay,
   onJoinCall,
 }: {
   debate: Debate;
+  review: ReviewState | null;
+  onRetryReview?: () => void;
   onReplay: () => void;
   onJoinCall: () => void;
 }) {
+  const ready = review?.status === "ready" && review.review.criteria.some((c) => c.score !== null) ? review.review : null;
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.25 });
   const shake = useAnimationControls();
@@ -68,7 +80,9 @@ export function Scorecard({
         <div className="relative overflow-hidden border-[3px] border-ink bg-paper p-6 shadow-brutal-lg sm:p-8 lg:self-start">
           <div className="bg-grid absolute inset-0 opacity-60" />
           <div className="relative">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">Overall · weighted</p>
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">
+              {ready ? "Overall · research-backed review" : review?.status === "loading" ? "Panel estimate · review pending" : "Overall · weighted"}
+            </p>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="font-display text-[clamp(7rem,18vw,11rem)] font-black leading-none tabular-nums">
                 <NumberFlow value={shown ? debate.overall : 0} transformTiming={{ duration: 1300, easing: "ease-out" }} />
@@ -115,6 +129,10 @@ export function Scorecard({
 
         {/* Criteria */}
         <div className="flex flex-col gap-6">
+          {review && review.status !== "ready" && <ReviewNotice review={review} onRetry={onRetryReview} />}
+          {ready ? (
+            <ReviewCriteria review={ready} shown={shown} />
+          ) : (
           <div className="border-[3px] border-ink bg-paper shadow-brutal">
             <div className="border-b-[3px] border-ink bg-teal px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-cream">
               Criteria breakdown
@@ -153,11 +171,14 @@ export function Scorecard({
               })}
             </ul>
           </div>
+          )}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <ListCard title="Lean on" tone="var(--mint)" mark="+" items={debate.strengths} />
             <ListCard title="Fix first" tone="var(--coral)" mark="!" items={debate.risks} />
           </div>
+
+          {ready && <SimilarProjects review={ready} />}
         </div>
       </motion.div>
 
@@ -200,7 +221,7 @@ export function Scorecard({
           cursor="copy"
           onClick={async () => {
             try {
-              await navigator.clipboard.writeText(summary(debate));
+              await navigator.clipboard.writeText(summary(debate, ready));
               setCopied(true);
               setTimeout(() => setCopied(false), 1800);
             } catch {
@@ -220,6 +241,150 @@ export function Scorecard({
         </filter>
       </svg>
     </section>
+  );
+}
+
+function ReviewNotice({ review, onRetry }: { review: ReviewState; onRetry?: () => void }) {
+  const loading = review.status === "loading";
+  return (
+    <div role={loading ? "status" : "alert"} className="flex flex-wrap items-center justify-between gap-3 border-[3px] border-ink bg-mustard p-4 shadow-brutal-sm">
+      <div>
+        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em]">
+          {loading && <span className="mr-2 inline-block h-2 w-2 animate-blink bg-ink" />}
+          Research-backed review
+        </p>
+        <p className="mt-1 text-sm leading-snug">
+          {loading
+            ? "Gemma is searching past hackathons and scoring 8 criteria. The scores below are the panel's estimate until it lands."
+            : `Unavailable: ${review.status === "failed" ? review.message : ""} Showing the panel's own scores.`}
+        </p>
+      </div>
+      {!loading && onRetry && (
+        <BrutalButton size="sm" tone="paper" cursor="retry" onClick={onRetry}>
+          Retry review
+        </BrutalButton>
+      )}
+    </div>
+  );
+}
+
+function ReviewCriteria({ review, shown }: { review: GemmaReview; shown: boolean }) {
+  return (
+    <div className="border-[3px] border-ink bg-paper shadow-brutal">
+      <div className="flex items-center justify-between gap-3 border-b-[3px] border-ink bg-teal px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-cream">
+        <span>Criteria breakdown</span>
+        <span className="text-[10px] tracking-widest text-cream/70">
+          Gemma · {review.model}
+          {review.search === "returned" ? " · Google Search" : " · no search"}
+        </span>
+      </div>
+      {review.missing && (
+        <p className="border-b-2 border-dashed border-ink/25 bg-cream px-4 py-2 text-xs leading-snug text-ink/70">
+          <span className="font-mono font-bold uppercase">Missing info:</span> {review.missing}
+        </p>
+      )}
+      <ul className="divide-y-2 divide-dashed divide-ink/25">
+        {review.criteria.map((c, i) => (
+          <li key={c.id} className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-display text-2xl font-black uppercase leading-none">{c.label}</span>
+              <span className="font-display text-3xl font-black tabular-nums">
+                {c.score === null ? "—" : <NumberFlow value={shown ? c.score : 0} />}
+                <span className="text-lg text-ink/40">/100</span>
+              </span>
+            </div>
+            <div className="mt-2 h-4 border-2 border-ink bg-cream">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={shown ? { width: `${c.score ?? 0}%` } : {}}
+                transition={{ delay: 0.3 + i * 0.08, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                className="bg-hatch h-full"
+                style={{ color: "var(--coral)", backgroundColor: "color-mix(in oklab, currentColor 35%, transparent)" }}
+              />
+            </div>
+            {c.explanation && <p className="mt-2 text-sm leading-snug text-ink/75">{c.explanation}</p>}
+            {(c.strengths.length > 0 || c.weaknesses.length > 0 || c.recommendations.length > 0) && (
+              <details className="mt-2 text-sm">
+                <summary data-cursor="open" className="cursor-pointer font-mono text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                  Details
+                </summary>
+                <dl className="mt-2 space-y-2 leading-snug">
+                  {(
+                    [
+                      ["Strengths", c.strengths],
+                      ["Weaknesses", c.weaknesses],
+                      ["Do next", c.recommendations],
+                    ] as const
+                  )
+                    .filter(([, items]) => items.length > 0)
+                    .map(([label, items]) => (
+                      <div key={label}>
+                        <dt className="font-mono text-[10px] font-bold uppercase tracking-wider">{label}</dt>
+                        {items.map((it) => (
+                          <dd key={it} className="text-ink/75">
+                            · {it}
+                          </dd>
+                        ))}
+                      </div>
+                    ))}
+                </dl>
+              </details>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SimilarProjects({ review }: { review: GemmaReview }) {
+  if (review.similarProjects.length === 0 && review.sources.length === 0) return null;
+  return (
+    <div className="border-[3px] border-ink bg-paper shadow-brutal-sm">
+      <div className="border-b-[3px] border-ink bg-lilac px-4 py-2 font-display text-2xl font-black uppercase">
+        Been done before?
+      </div>
+      <div className="space-y-4 p-4">
+        {review.similarProjects.length > 0 ? (
+          <ul className="space-y-3">
+            {review.similarProjects.map((p) => (
+              <li key={`${p.name}-${p.url}`} className="text-sm leading-snug">
+                {p.url ? (
+                  <a href={p.url} target="_blank" rel="noreferrer" data-cursor="open" className="font-bold underline decoration-2 underline-offset-2">
+                    {p.name}
+                  </a>
+                ) : (
+                  <span className="font-bold">{p.name}</span>
+                )}
+                {p.note && <span className="text-ink/75"> — {p.note}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink/70">No similar projects found.</p>
+        )}
+        {review.sources.length > 0 && (
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-ink/60">Search sources</p>
+            <ul className="mt-1 flex flex-wrap gap-2">
+              {review.sources.slice(0, 8).map((s) => (
+                <li key={s.uri}>
+                  <a
+                    href={s.uri}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-cursor="open"
+                    className="inline-block max-w-[16rem] truncate border-2 border-ink bg-cream px-2 py-0.5 text-xs hover:bg-mustard"
+                  >
+                    {s.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

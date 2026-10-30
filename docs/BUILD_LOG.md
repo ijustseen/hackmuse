@@ -83,3 +83,21 @@ clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets 
 - Verified in the browser with real Gemma 4: chat intro → six seats fill → 10-line debate with beams/"called out" →
   skip to verdict → "Join the call" → speaker view cuts per speaker, gallery view, captions.
 - `docs/LOVABLE_PRESENTATION_PROMPT.md` still describes the original four-judge panel and glyphs — update before the deck is built.
+
+## 2026-10-30 — round 3: teammate backend merged and wired into the app
+
+- Merged `origin/main` (teammate's `backend` + `ai-connection` PRs) into `feat/idea-grader`. Our landing, layout and
+  styles won the conflicts; `package.json` takes both sides (adds `@google/genai`, `zod`, Node 22 engine).
+- The landing form now has a collapsible **Pitched at** section (hackathon URL + rules), prefilled with today's Linz
+  hack day, because the backend requires both. Stored per session next to the idea.
+- The debate room calls **`POST /api/gemma-review`** in parallel with `/api/debate`. When it lands, the scorecard
+  swaps the placeholder 5-criterion breakdown for the review's 8 criteria (0–100, with strengths / weaknesses / next
+  steps), adds a "Been done before?" card with the similar projects and Google Search sources, and the headline score
+  becomes the review's average. Until then it shows the panel's estimate with a "review pending" notice; on failure,
+  a retry button. The review is cached in `sessionStorage` like the debate.
+- `/api/debate` also accepts `hackathonUrl` + `rules`, so the judges argue about fit with the actual event.
+- `server/gemma/review.ts` now also reads `GEMMA_API_KEY` (falls back from `GEMINI_API_KEY`).
+- Measured live: review **153 s** (search call + 8k-token scoring call, default thinking) vs debate first line in
+  about 1 s. The review usually lands after the verdict.
+- Not wired: `/api/evaluations` (podcast + research + analysis pipeline). Its live LLM, search, page and speech
+  providers are still placeholders that throw, so only the stub fixtures run.

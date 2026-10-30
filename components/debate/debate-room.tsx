@@ -3,13 +3,14 @@
 import { useLenis } from "lenis/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Logo } from "@/components/landing/site-header";
 import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
 import { RandomizedText } from "@/components/ui/randomized-text";
 import { DebateEngine, IDLE_SNAPSHOT, type PlayerSnapshot } from "@/lib/client/debate-engine";
-import { loadDebate, loadIdea, saveDebate } from "@/lib/idea";
+import { loadDebate, loadHackathon, loadIdea, loadReview, saveDebate, saveReview } from "@/lib/idea";
 import { DEBATE_LENGTH, type JudgeId } from "@/lib/judges";
+import { fetchReview, reviewOverall, type ReviewState } from "@/lib/review";
 import type { Debate, StreamEvent } from "@/lib/types";
 import { CallView } from "./call-view";
 import { Caption } from "./caption";
@@ -62,6 +63,26 @@ export function DebateRoom() {
   const [callOpen, setCallOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const reviewAbortRef = useRef<AbortController | null>(null);
+  // Gemma + Google Search review (the teammate backend). Runs in parallel with the
+  // debate and usually lands while the panel is still talking.
+  const [review, setReview] = useState<ReviewState | null>(null);
+
+  const requestReview = useCallback(async (idea: string) => {
+    reviewAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    reviewAbortRef.current = ctrl;
+    setReview({ status: "loading" });
+    try {
+      const result = await fetchReview({ idea, ...loadHackathon() }, ctrl.signal);
+      if (ctrl.signal.aborted) return;
+      saveReview(idea, result);
+      setReview({ status: "ready", review: result });
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      setReview({ status: "failed", message: err instanceof Error ? err.message : "The review failed." });
+    }
+  }, []);
 
   const requestDebate = useCallback(async (idea: string, demo = false) => {
     abortRef.current?.abort();
@@ -79,7 +100,7 @@ export function DebateRoom() {
       const res = await fetch("/api/debate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, demo }),
+        body: JSON.stringify({ idea, demo, ...loadHackathon() }),
         signal: ctrl.signal,
       });
       if (!res.ok) {
@@ -130,8 +151,14 @@ export function DebateRoom() {
       // ?demo=1 plays the scripted debate (no API calls) — handy for UI demos.
       void requestDebate(idea, new URLSearchParams(window.location.search).has("demo"));
     }
-    return () => abortRef.current?.abort();
-  }, [router, requestDebate]);
+    const cachedReview = loadReview(idea);
+    if (cachedReview) setReview({ status: "ready", review: cachedReview });
+    else if (!new URLSearchParams(window.location.search).has("demo")) void requestReview(idea);
+    return () => {
+      abortRef.current?.abort();
+      reviewAbortRef.current?.abort();
+    };
+  }, [router, requestDebate, requestReview]);
 
   const engine = session?.engine ?? null;
   const fromCache = session?.fromCache ?? false;
@@ -146,7 +173,13 @@ export function DebateRoom() {
   }, [engine, fromCache, assembled]);
 
   const snap = useSyncExternalStore(engine?.subscribe ?? noopSubscribe, engine?.getSnapshot ?? idleSnapshot, idleSnapshot);
-  const debate = session?.debate ?? null;
+  // Once the research-backed review lands, its score becomes the headline number.
+  const reviewScore = review?.status === "ready" ? reviewOverall(review.review) : null;
+  const rawDebate = session?.debate ?? null;
+  const debate = useMemo(
+    () => (rawDebate && reviewScore !== null ? { ...rawDebate, overall: reviewScore } : rawDebate),
+    [rawDebate, reviewScore],
+  );
   const lines = snap.lines;
   const done = snap.status === "done" && debate !== null;
   const line = snap.index >= 0 && snap.index < lines.length ? lines[snap.index] : null;
@@ -304,6 +337,8 @@ export function DebateRoom() {
             <div className="mt-20">
               <Scorecard
                 debate={debate}
+                review={review}
+                onRetryReview={session ? () => requestReview(session.idea) : undefined}
                 onReplay={() => {
                   engine?.jumpTo(0);
                   if (lenis) lenis.scrollTo(0, { duration: 1.2 });
