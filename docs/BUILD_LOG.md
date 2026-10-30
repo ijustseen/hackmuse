@@ -64,6 +64,13 @@ components/
 - `LayoutProps` is a generated type: `tsc` alone fails until `next dev`/`next build` has run.
 - `next dev` rewrites `AGENTS.md` (Next's agent rules + `experimental.agentFeedback` block); commit it to keep the tree clean.
 
+### Cursor rework (same day, after first review)
+
+The first cursor turned into a solid 92 px coral block on hover, which hid the button underneath, was the same size for
+every target, and vanished on dark sections. Now: corner brackets snap around the hovered element (content stays
+visible), the label is a sticker above it, the dot/frame use `mix-blend-mode: difference`, the spring is snappier, and
+clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets follow the page.
+
 ### Next up (stretch)
 
 - Plug in the real rubric (`lib/rubric.ts`) and confirm the panel personas.
