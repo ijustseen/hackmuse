@@ -77,3 +77,9 @@ clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets 
 - Add the ElevenLabs key and listen to a full debate; try `ELEVENLABS_MODEL=eleven_v3` for delivery tags.
 - Live Q&A round with one judge (ElevenLabs conversational agent).
 - For the "Best Open-Source AI Project" track: add an OSS license and name the model + its license in the README.
+
+## 2026-10-30 — round 2: six judges, avatars, group-chat waiting room, call view
+
+- Verified in the browser with real Gemma 4: chat intro → six seats fill → 10-line debate with beams/"called out" →
+  skip to verdict → "Join the call" → speaker view cuts per speaker, gallery view, captions.
+- `docs/LOVABLE_PRESENTATION_PROMPT.md` still describes the original four-judge panel and glyphs — update before the deck is built.

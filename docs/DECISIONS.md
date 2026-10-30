@@ -40,3 +40,12 @@ What we agreed before and during the build (hack day, 2026-10-30). Newest decisi
 |---|----------|-----|
 | P1 | Work on branch `feat/idea-grader`, commit locally, **push only when asked**. | Repo belongs to `ijustseen`. |
 | P2 | Everything we decide or build is written down here and in `BUILD_LOG.md`. | User request. |
+
+## Round 2 (user feedback, same day)
+
+| # | Decision | Why |
+|---|----------|-----|
+| R1 | Panel grows to **six**: Chair, Shark, Builder, Angel (angel investor, "why you?"), Visionary, Operator (ex-founder, distribution). Everything — prompt, seats, chat, call, scorecard — is driven by `JUDGE_ORDER` in `lib/judges.ts`, so more judges is a one-file change. Debate = Chair + one opening per voter + 3 rebuttals + verdict (10 lines). | "There will not be only 4." |
+| R2 | Font glyphs (§ $ # *) replaced by **drawn SVG avatars** (`components/judge-avatar.tsx`): square head + one prop each (wig, shark fin + shades, hard hat, halo, beret + glasses, headset). Centred by construction; the mouth animates while talking. | User disliked the logos and they weren't centred. |
+| R3 | **Waiting room = group chat** (`group-chat.tsx`): judges join one by one, type, post a one-liner; their seat at the table fills as they arrive. Playback starts once the panel has assembled (~7 s, "Skip intro" available); voice clips prefetch meanwhile. | User wanted a chat-style animation while waiting. |
+| R4 | **"Join the call"** after the verdict (`call-view.tsx`): a full-screen video-call that replays the debate. Speaker view — the "camera" whips in from the speaker's side of the table, slow push-in, name plate, live captions; filmstrip + "You" tile (optional local webcam, never uploaded); gallery view; Esc / Leave call. | User asked for a Zoom-style call where the camera turns to each investor. |

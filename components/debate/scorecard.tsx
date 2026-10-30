@@ -3,6 +3,7 @@
 import NumberFlow from "@number-flow/react";
 import { motion, useAnimationControls, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { JudgeAvatar } from "@/components/judge-avatar";
 import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
 import { JUDGES, VOTING_JUDGES } from "@/lib/judges";
 import { RUBRIC, gradeFor } from "@/lib/rubric";
@@ -21,7 +22,15 @@ function summary(d: Debate) {
     .join("\n");
 }
 
-export function Scorecard({ debate, onReplay }: { debate: Debate; onReplay: () => void }) {
+export function Scorecard({
+  debate,
+  onReplay,
+  onJoinCall,
+}: {
+  debate: Debate;
+  onReplay: () => void;
+  onJoinCall: () => void;
+}) {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.25 });
   const shake = useAnimationControls();
@@ -85,19 +94,19 @@ export function Scorecard({ debate, onReplay }: { debate: Debate; onReplay: () =
               <footer className="mt-2 font-mono text-[11px] font-bold uppercase tracking-wider text-ink/60">— The Chair</footer>
             </blockquote>
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5">
               {VOTING_JUDGES.map((id, i) => (
                 <motion.div
                   key={id}
                   initial={{ y: 20, opacity: 0 }}
                   animate={shown ? { y: 0, opacity: 1 } : {}}
                   transition={{ delay: 1.8 + i * 0.12 }}
-                  className="border-[3px] border-ink p-2 text-center"
+                  className="flex flex-col items-center border-[3px] border-ink p-1.5 text-center"
                   style={{ backgroundColor: JUDGES[id].color }}
                 >
-                  <p className="font-display text-3xl font-black leading-none">{JUDGES[id].glyph}</p>
+                  <JudgeAvatar id={id} className="w-10 bg-paper!" />
                   <p className="mt-1 font-display text-3xl font-black leading-none tabular-nums">{debate.votes[id]}</p>
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider">{JUDGES[id].name.replace("The ", "")}</p>
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-wider">{JUDGES[id].short}</p>
                 </motion.div>
               ))}
             </div>
@@ -119,9 +128,7 @@ export function Scorecard({ debate, onReplay }: { debate: Debate; onReplay: () =
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         {owner && (
-                          <span className="inline-flex h-6 w-6 items-center justify-center border-2 border-ink font-display text-sm font-black" style={{ backgroundColor: owner.color }}>
-                            {owner.glyph}
-                          </span>
+                          <JudgeAvatar id={owner.id} className="w-7" />
                         )}
                         <span className="font-display text-2xl font-black uppercase leading-none">{c.label}</span>
                         <span className="font-mono text-[10px] text-ink/50">×{Math.round(c.weight * 100)}%</span>
@@ -154,7 +161,33 @@ export function Scorecard({ debate, onReplay }: { debate: Debate; onReplay: () =
         </div>
       </motion.div>
 
-      <div className="mt-10 flex flex-wrap gap-4">
+      {/* Join the call */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={shown ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: 2.4 }}
+        className="mt-10 flex flex-col items-start justify-between gap-5 border-[3px] border-ink bg-ink p-6 text-cream shadow-brutal-lg sm:flex-row sm:items-center"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex -space-x-2">
+            {VOTING_JUDGES.map((id) => (
+              <JudgeAvatar key={id} id={id} className="w-10" />
+            ))}
+          </div>
+          <div>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-coral">
+              <span className="mr-2 inline-block h-2 w-2 animate-blink bg-coral" />
+              Panel is still on the line
+            </p>
+            <p className="font-display text-3xl font-black uppercase leading-none">Join the call. Hear them argue.</p>
+          </div>
+        </div>
+        <BrutalButton size="lg" cursor="join" onClick={onJoinCall}>
+          ▶ Join the call
+        </BrutalButton>
+      </motion.div>
+
+      <div className="mt-8 flex flex-wrap gap-4">
         <BrutalLink href="/#pitch" size="lg" cursor="new">
           Grade another idea →
         </BrutalLink>

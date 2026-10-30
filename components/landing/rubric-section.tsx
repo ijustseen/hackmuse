@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { JudgeAvatar } from "@/components/judge-avatar";
 import { TextAnimation } from "@/components/ui/text-animation";
 import { JUDGES, JUDGE_ORDER } from "@/lib/judges";
 import { RUBRIC } from "@/lib/rubric";
@@ -41,13 +42,7 @@ export function RubricSection() {
                     </div>
                     <div className="flex items-center gap-3">
                       {owner && (
-                        <span
-                          title={owner.name}
-                          className="inline-flex h-8 w-8 items-center justify-center border-2 border-ink font-display text-lg font-black text-ink"
-                          style={{ backgroundColor: owner.color }}
-                        >
-                          {owner.glyph}
-                        </span>
+                        <JudgeAvatar id={owner.id} className="w-9" />
                       )}
                       <span className="font-display text-4xl font-black tabular-nums text-mustard">
                         {Math.round(c.weight * 100)}%

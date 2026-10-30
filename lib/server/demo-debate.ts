@@ -1,4 +1,5 @@
 import "server-only";
+import { VOTING_JUDGES } from "../judges";
 import { CRITERION_IDS } from "../rubric";
 import type { DebateLine, StreamEvent } from "../types";
 import { assembleDebate, normalizeLine } from "./gemma";
@@ -46,10 +47,12 @@ export async function* streamDemo(idea: string, signal?: AbortSignal): AsyncGene
     { speaker: "chair", replyTo: null, cue: "warm", text: `Order, everyone. On the table tonight: ${snippet} Shark, you look hungry.` },
     { speaker: "shark", replyTo: null, cue: "skeptical", text: `I'll be blunt. I don't see who pays for ${title}. Hackathon judges love a demo, but investors love a customer, and I can't name one yet.` },
     { speaker: "builder", replyTo: null, cue: "dry", text: "The happy path is a weekend of work. The hard part is the data: where it comes from, how fresh it is, and what happens when it's wrong." },
-    { speaker: "visionary", replyTo: null, cue: "excited", text: "You're both missing the moment. Picture the demo: one input, and the room watches it come alive. That's the thing people will talk about at dinner." },
+    { speaker: "angel", replyTo: null, cue: "warm", text: "Before the product, the people. Whoever pitches this needs a reason they, specifically, should build it. Give me that and I'm listening." },
+    { speaker: "visionary", replyTo: null, cue: "excited", text: "You're all missing the moment. Picture the demo: one input, and the room watches it come alive. That's the thing people will talk about at dinner." },
+    { speaker: "operator", replyTo: null, cue: "dry", text: "Nice moment. Now tell me how the first hundred users find it. A demo isn't a channel." },
     { speaker: "shark", replyTo: "visionary", cue: "dry", text: "Visionary, dinner conversation isn't a business. Give me one person who'd be angry if this disappeared tomorrow." },
     { speaker: "builder", replyTo: "shark", cue: "firm", text: "Shark, it's a hackathon, not a Series A. If they scope it to one sharp flow and fake nothing, it's buildable and honest." },
-    { speaker: "visionary", replyTo: "builder", cue: "amused", text: "Builder's right about scope, and that's my point: cut everything except the wow, then polish the wow until it shines." },
+    { speaker: "operator", replyTo: "visionary", cue: "firm", text: "Visionary, polish without distribution is a beautiful empty room. Launch it where the users already are." },
     { speaker: "chair", replyTo: null, cue: "firm", text: "Verdict: a demo-friendly idea with a clear hook. Biggest strength, the moment it creates. Biggest risk, nobody yet owns the problem it solves." },
   ];
 
@@ -70,7 +73,7 @@ export async function* streamDemo(idea: string, signal?: AbortSignal): AsyncGene
     scores: Object.fromEntries(
       CRITERION_IDS.map((id) => [id, { score: pick(), note: "Demo mode: placeholder note, connect Gemma for a real one." }]),
     ),
-    votes: { shark: pick(), builder: pick(), visionary: pick() },
+    votes: Object.fromEntries(VOTING_JUDGES.map((id) => [id, pick()])),
     verdict: "Demo-friendly with a clear hook; prove someone actually needs it.",
     strengths: ["A clear demo moment", "Scopable to a single flow"],
     risks: ["No obvious paying user yet", "Depends on data quality"],

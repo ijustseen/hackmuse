@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 const GLYPHS = ["§", "$", "#", "*", "✦", "◆"];
 
-export function DeliberatingLoader({ messages }: { messages: string[] }) {
+export function DeliberatingLoader({ messages, compact = false }: { messages: string[]; compact?: boolean }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function DeliberatingLoader({ messages }: { messages: string[] }) {
           {message}
         </motion.span>
       </div>
-      <div className="mt-4 flex items-center gap-3 text-xs">
+      <div className={compact ? "hidden" : "mt-4 flex items-center gap-3 text-xs"}>
         <span aria-hidden className="tracking-[-0.05em]">
           [{"█".repeat(filled)}
           <span className="opacity-25">{"░".repeat(cells - filled)}</span>]

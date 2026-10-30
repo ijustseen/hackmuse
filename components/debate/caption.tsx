@@ -49,7 +49,7 @@ export function Caption({
   );
 }
 
-function TypedText({ text, progress }: { text: string; progress: MotionValue<number> }) {
+export function TypedText({ text, progress }: { text: string; progress: MotionValue<number> }) {
   const [count, setCount] = useState(() => Math.round(progress.get() * text.length));
   useMotionValueEvent(progress, "change", (p) => {
     // Lead the voice slightly so the words never lag behind what you hear.

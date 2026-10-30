@@ -2,7 +2,8 @@
 
 import { StackingCards, type StackItem } from "@/components/ui/stacking-cards";
 import { TextAnimation } from "@/components/ui/text-animation";
-import { JUDGES, JUDGE_ORDER } from "@/lib/judges";
+import { JudgeAvatar } from "@/components/judge-avatar";
+import { JUDGE_ORDER } from "@/lib/judges";
 
 const PitchArt = (
   <div className="w-64 border-[3px] border-ink bg-cream p-3 shadow-brutal-sm">
@@ -22,18 +23,14 @@ const TableArt = (
   <div className="relative h-56 w-56">
     <div className="bg-halftone absolute inset-8 rounded-full border-[3px] border-ink bg-mustard/60" />
     {JUDGE_ORDER.map((id, i) => {
-      const angle = (i / 4) * Math.PI * 2 - Math.PI / 2;
+      const angle = (i / JUDGE_ORDER.length) * Math.PI * 2 - Math.PI / 2;
       return (
         <span
           key={id}
-          className="absolute inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center border-[3px] border-ink font-display text-2xl font-black"
-          style={{
-            left: `${50 + Math.cos(angle) * 42}%`,
-            top: `${50 + Math.sin(angle) * 42}%`,
-            backgroundColor: JUDGES[id].color,
-          }}
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `${50 + Math.cos(angle) * 42}%`, top: `${50 + Math.sin(angle) * 42}%` }}
         >
-          {JUDGES[id].glyph}
+          <JudgeAvatar id={id} className="w-12 border-[3px]" />
         </span>
       );
     })}
@@ -71,14 +68,14 @@ const STEPS: StackItem[] = [
   {
     kicker: "Step 02",
     title: "Hear the debate",
-    body: "Gemma 4 writes a real argument between four judges. ElevenLabs gives each one a voice. You watch it happen around the table.",
+    body: "Gemma 4 writes a real argument between a panel of six judges. ElevenLabs gives each one a voice. You watch it happen around the table.",
     color: "var(--mustard)",
     art: TableArt,
   },
   {
     kicker: "Step 03",
     title: "Get the verdict",
-    body: "Five criteria, three personal votes, one weighted score out of 100 — plus the strengths to lean on and the risks to fix.",
+    body: "Five criteria, five personal votes, one weighted score out of 100 — plus the strengths to lean on and the risks to fix.",
     color: "var(--mint)",
     art: ScoreArt,
   },

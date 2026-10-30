@@ -1,5 +1,5 @@
 import "server-only";
-import { JUDGES, VOTING_JUDGES, isJudgeId, type JudgeId } from "../judges";
+import { DEBATE_LENGTH, JUDGES, JUDGE_ORDER, REBUTTALS, VOTING_JUDGES, isJudgeId } from "../judges";
 import { CRITERION_IDS, RUBRIC, overallScore, type CriterionId } from "../rubric";
 import type { Debate, DebateLine, StreamEvent } from "../types";
 import { clamp } from "../utils";
@@ -23,10 +23,24 @@ function thinkingLevel() {
   return process.env.GEMMA_THINKING || "minimal";
 }
 
-const PANEL_ORDER: JudgeId[] = ["chair", "shark", "builder", "visionary"];
+const MAX_LINES = DEBATE_LENGTH + 2;
+
+function debateOutline() {
+  const steps = [
+    "chair: welcomes the room and restates the idea in one punchy sentence.",
+    ...VOTING_JUDGES.map((id) => `${id}: opening take.`),
+    ...Array.from(
+      { length: REBUTTALS },
+      () =>
+        "rebuttal: any judge except the chair answers another judge by name (use three different speakers across the three rebuttals; pick the sharpest clashes).",
+    ),
+    "chair: the verdict, naming the single biggest strength and the single biggest risk.",
+  ];
+  return steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
+}
 
 function panelBrief() {
-  return PANEL_ORDER.map((id) => {
+  return JUDGE_ORDER.map((id) => {
     const j = JUDGES[id];
     const owns = j.owns.length ? ` Owns ${j.owns.map((c) => c.toUpperCase()).join(" and ")}.` : "";
     return `- ${id}: "${j.name}", ${j.brief}${owns}`;
@@ -37,7 +51,7 @@ function criteriaBrief() {
   return RUBRIC.map((c) => `- ${c.id}: ${c.label} — ${c.question}`).join("\n");
 }
 
-const SCORES_SHAPE = `{"type":"scores","scores":{"originality":{"score":7,"note":"..."},"feasibility":{"score":6,"note":"..."},"impact":{"score":5,"note":"..."},"techDepth":{"score":6,"note":"..."},"demoWow":{"score":8,"note":"..."}},"votes":{"shark":5,"builder":7,"visionary":8},"verdict":"one sentence, at most 20 words","strengths":["...","..."],"risks":["...","..."]}`;
+const SCORES_SHAPE = `{"type":"scores","scores":{"originality":{"score":7,"note":"..."},"feasibility":{"score":6,"note":"..."},"impact":{"score":5,"note":"..."},"techDepth":{"score":6,"note":"..."},"demoWow":{"score":8,"note":"..."}},"votes":{${VOTING_JUDGES.map((id, i) => `"${id}":${[5, 7, 8, 6, 4][i % 5]}`).join(",")}},"verdict":"one sentence, at most 20 words","strengths":["...","..."],"risks":["...","..."]}`;
 
 function buildPrompt(idea: string) {
   return `You are the writers' room for HACKMUSE, a live show where a panel of AI judges debates a hackathon idea out loud, around a round table, and scores it.
@@ -50,26 +64,19 @@ ${idea}
 THE PANEL
 ${panelBrief()}
 
-WRITE THE DEBATE as exactly 8 spoken lines, in this order:
-1. chair: welcomes the room and restates the idea in one punchy sentence.
-2. shark: opening take.
-3. builder: opening take.
-4. visionary: opening take.
-5. shark: rebuts another judge by name.
-6. builder: rebuts another judge by name.
-7. visionary: rebuts another judge by name.
-8. chair: the verdict, naming the single biggest strength and the single biggest risk.
+WRITE THE DEBATE as exactly ${DEBATE_LENGTH} spoken lines, in this order:
+${debateOutline()}
 
-Line rules: natural spoken English, 1 to 3 sentences, at most 45 words. Be specific to THIS idea, no generic filler. The judges genuinely disagree. No markdown, no emojis, no stage directions inside "text". "replyTo" is the judge being answered (or null). "cue" is one lowercase word for the delivery, e.g. skeptical, excited, dry, amused, firm, warm.
+Line rules: natural spoken English, 1 to 3 sentences, at most 40 words. Be specific to THIS idea, no generic filler. The judges genuinely disagree. No markdown, no emojis, no stage directions inside "text". "replyTo" is the judge being answered (or null). "cue" is one lowercase word for the delivery, e.g. skeptical, excited, dry, amused, firm, warm.
 
 THEN SCORE the idea with integers 0-10 on each criterion, each with a one-sentence note:
 ${criteriaBrief()}
-Be honest: an average hackathon idea is a 5, a 9 is rare. Each of shark, builder and visionary also casts a personal vote 0-10.
+Be honest: an average hackathon idea is a 5, a 9 is rare. Each of ${VOTING_JUDGES.join(", ")} also casts a personal vote 0-10.
 
-OUTPUT FORMAT — JSON Lines: one complete JSON object per line, nothing else (no prose, no code fences, no array). Exactly 10 lines:
+OUTPUT FORMAT — JSON Lines: one complete JSON object per line, nothing else (no prose, no code fences, no array). Exactly ${DEBATE_LENGTH + 2} lines:
 {"type":"title","title":"2-5 word name for the idea"}
 {"type":"line","speaker":"chair","replyTo":null,"cue":"warm","text":"..."}
-... (8 "line" objects in the order above)
+... (${DEBATE_LENGTH} "line" objects in the order above)
 ${SCORES_SHAPE}`;
 }
 
@@ -85,7 +92,7 @@ ${transcript}
 
 Score the idea with integers 0-10 on each criterion, with a one-sentence note each:
 ${criteriaBrief()}
-An average hackathon idea is a 5, a 9 is rare. shark, builder and visionary each cast a personal vote 0-10 consistent with what they said.
+An average hackathon idea is a 5, a 9 is rare. ${VOTING_JUDGES.join(", ")} each cast a personal vote 0-10 consistent with what they said.
 Return ONLY this JSON object on one line:
 ${SCORES_SHAPE}`;
 }
@@ -280,7 +287,7 @@ export async function* streamDebate(idea: string, apiKey: string, signal?: Abort
             rawScores = o;
           } else if (o.speaker) {
             const line = normalizeLine(o);
-            if (line && lines.length < 10) {
+            if (line && lines.length < MAX_LINES) {
               lines.push(line);
               yield { type: "line", line };
             }
@@ -291,7 +298,7 @@ export async function* streamDebate(idea: string, apiKey: string, signal?: Abort
             // The model ignored JSON Lines and sent one big object.
             for (const raw of o.lines) {
               const line = normalizeLine(raw);
-              if (line && lines.length < 10) {
+              if (line && lines.length < MAX_LINES) {
                 lines.push(line);
                 yield { type: "line", line };
               }

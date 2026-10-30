@@ -2,7 +2,8 @@
 
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
-import { JUDGES, JUDGE_ORDER } from "@/lib/judges";
+import { JudgeAvatar } from "@/components/judge-avatar";
+import { DEBATE_LENGTH, JUDGES, JUDGE_ORDER } from "@/lib/judges";
 import { IdeaForm } from "./idea-form";
 
 function SpinningSticker() {
@@ -78,7 +79,7 @@ export function Hero() {
             transition={{ delay: 0.5 }}
             className="mt-10 max-w-lg text-lg leading-relaxed text-ink/80"
           >
-            Pitch it in a few sentences. Four AI judges sit down at the round table, argue about it{" "}
+            Pitch it in a few sentences. A panel of AI judges and investors sits down at the round table, argues about it{" "}
             <em className="font-semibold not-italic text-ink underline decoration-coral decoration-4 underline-offset-4">
               out loud
             </em>
@@ -93,16 +94,14 @@ export function Hero() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.8 + i * 0.08 }}
-                  className="inline-flex h-11 w-11 items-center justify-center border-2 border-ink font-display text-2xl font-black"
-                  style={{ backgroundColor: JUDGES[id].color }}
                   title={JUDGES[id].name}
                 >
-                  {JUDGES[id].glyph}
+                  <JudgeAvatar id={id} className="w-11" />
                 </motion.span>
               ))}
             </div>
             <p className="font-mono text-xs font-bold uppercase leading-tight tracking-wider">
-              4 judges · 8 arguments
+              {JUDGE_ORDER.length} judges · {DEBATE_LENGTH} arguments
               <br />
               1 verdict · 0 mercy
             </p>

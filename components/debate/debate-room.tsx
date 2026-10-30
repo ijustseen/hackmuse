@@ -10,8 +10,11 @@ import { DeliberatingLoader } from "@/components/ui/deliberating-loader";
 import { RandomizedText } from "@/components/ui/randomized-text";
 import { DebateEngine, IDLE_SNAPSHOT, type PlayerSnapshot } from "@/lib/client/debate-engine";
 import { loadDebate, loadIdea, saveDebate } from "@/lib/idea";
+import { DEBATE_LENGTH, type JudgeId } from "@/lib/judges";
 import type { Debate, StreamEvent } from "@/lib/types";
+import { CallView } from "./call-view";
 import { Caption } from "./caption";
+import { GroupChat } from "./group-chat";
 import { Roundtable } from "./roundtable";
 import { Scorecard } from "./scorecard";
 import { Transcript } from "./transcript";
@@ -63,6 +66,11 @@ export function DebateRoom() {
   const router = useRouter();
   const lenis = useLenis();
   const [session, setSession] = useState<Session | null>(null);
+  // Waiting room: who has joined the group chat, and whether everyone is in.
+  const [present, setPresent] = useState<JudgeId[]>([]);
+  const [assembled, setAssembled] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
+  const [chatKey, setChatKey] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   const requestDebate = useCallback(async (idea: string, demo = false) => {
@@ -70,6 +78,9 @@ export function DebateRoom() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const engine = new DebateEngine();
+    setPresent([]);
+    setAssembled(false);
+    setChatKey((k) => k + 1);
     const update = (patch: Partial<Session>) =>
       setSession((s) => (s && s.engine === engine ? { ...s, ...patch } : s));
     setSession({ idea, engine, fromCache: false, title: null, source: null, model: null, debate: null, error: null });
@@ -138,17 +149,20 @@ export function DebateRoom() {
   useEffect(() => {
     if (!engine) return;
     if (fromCache) engine.skipToEnd();
-    else engine.start();
+    else if (assembled) engine.start();
+    else return;
     return () => engine.dispose();
-  }, [engine, fromCache]);
+  }, [engine, fromCache, assembled]);
 
   const snap = useSyncExternalStore(engine?.subscribe ?? noopSubscribe, engine?.getSnapshot ?? idleSnapshot, idleSnapshot);
   const debate = session?.debate ?? null;
   const lines = snap.lines;
   const done = snap.status === "done" && debate !== null;
   const line = snap.index >= 0 && snap.index < lines.length ? lines[snap.index] : null;
-  const deliberating = !session || (lines.length === 0 && !session.error);
-  const total = snap.complete ? lines.length : Math.max(8, lines.length);
+  const started = fromCache || (assembled && lines.length > 0);
+  const deliberating = !session || (!started && !session.error);
+  const total = snap.complete ? lines.length : Math.max(DEBATE_LENGTH, lines.length);
+  const caseNo = session ? String(hashIdea(session.idea) % 10000).padStart(4, "0") : "0000";
 
   // Glide down to the scorecard when the Chair finishes.
   useEffect(() => {
@@ -233,6 +247,7 @@ export function DebateRoom() {
                   analyser={engine?.analyser ?? null}
                   deliberating={deliberating}
                   done={done}
+                  present={started ? null : present}
                 />
                 <AnimatePresence>
                   {engine && snap.status === "blocked" && (
@@ -256,14 +271,22 @@ export function DebateRoom() {
               {engine && !deliberating && !done && (
                 <Caption line={line} index={snap.index} progress={engine.progress} emptyText={waitingText} />
               )}
-              {deliberating && (
-                <div className="border-[3px] border-ink bg-paper p-5 shadow-brutal">
-                  <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">Please rise</p>
-                  <h1 className="mt-1 font-display text-5xl font-black uppercase leading-[0.9]">The panel is deliberating</h1>
-                  <div className="mt-6">
-                    <DeliberatingLoader messages={LOADING_MESSAGES} />
+              {session && deliberating && (
+                <>
+                  <GroupChat
+                    key={chatKey}
+                    caseNo={caseNo}
+                    waiting={lines.length === 0}
+                    onJoin={(id) => setPresent((p) => (p.includes(id) ? p : [...p, id]))}
+                    onAssembled={() => setAssembled(true)}
+                  />
+                  <div className="flex items-center justify-between gap-3 border-[3px] border-ink bg-paper px-4 py-3 shadow-brutal-sm">
+                    <DeliberatingLoader messages={LOADING_MESSAGES} compact />
+                    <BrutalButton size="sm" tone="paper" cursor="skip" onClick={() => setAssembled(true)}>
+                      Skip intro
+                    </BrutalButton>
                   </div>
-                </div>
+                </>
               )}
 
               {session?.error && (
@@ -285,7 +308,7 @@ export function DebateRoom() {
                 </div>
               )}
 
-              {engine && lines.length > 0 && (
+              {engine && started && lines.length > 0 && (
                 <>
                   <Controls engine={engine} snap={snap} total={total} />
                   <Transcript lines={lines} index={snap.index} complete={snap.complete} onJump={(i) => engine.jumpTo(i)} />
@@ -303,13 +326,36 @@ export function DebateRoom() {
                   if (lenis) lenis.scrollTo(0, { duration: 1.2 });
                   else window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
+                onJoinCall={() => {
+                  engine?.jumpTo(0);
+                  setCallOpen(true);
+                }}
               />
             </div>
           )}
+          <AnimatePresence>
+            {callOpen && engine && debate && (
+              <CallView
+                engine={engine}
+                snap={snap}
+                debate={debate}
+                onLeave={() => {
+                  engine.skipToEnd();
+                  setCallOpen(false);
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </main>
     </>
   );
+}
+
+function hashIdea(s: string) {
+  let h = 7;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
 }
 
 function Controls({ engine, snap, total }: { engine: DebateEngine; snap: PlayerSnapshot; total: number }) {

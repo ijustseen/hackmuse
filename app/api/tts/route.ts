@@ -8,6 +8,8 @@ const VOICE_SETTINGS = {
   shark: { stability: 0.55, similarity_boost: 0.8, style: 0.3 },
   builder: { stability: 0.5, similarity_boost: 0.75, style: 0.25 },
   visionary: { stability: 0.35, similarity_boost: 0.75, style: 0.6 },
+  angel: { stability: 0.5, similarity_boost: 0.8, style: 0.35 },
+  operator: { stability: 0.55, similarity_boost: 0.8, style: 0.25 },
 } as const;
 
 export async function POST(request: Request) {
