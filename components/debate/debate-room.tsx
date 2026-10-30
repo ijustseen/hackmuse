@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Logo } from "@/components/landing/site-header";
 import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
-import { DeliberatingLoader } from "@/components/ui/deliberating-loader";
 import { RandomizedText } from "@/components/ui/randomized-text";
 import { DebateEngine, IDLE_SNAPSHOT, type PlayerSnapshot } from "@/lib/client/debate-engine";
 import { loadDebate, loadIdea, saveDebate } from "@/lib/idea";
@@ -33,15 +32,6 @@ interface Session {
 
 const noopSubscribe = () => () => {};
 const idleSnapshot = () => IDLE_SNAPSHOT;
-
-const LOADING_MESSAGES = [
-  "The Chair is calling the room to order…",
-  "The Shark is asking who pays for this…",
-  "The Builder is estimating story points…",
-  "The Visionary is picturing the demo…",
-  "Gemma 4 is drafting the arguments…",
-  "Warming up the voices…",
-];
 
 /** Reads an NDJSON response body, calling onEvent for each parsed line. */
 async function readEvents(res: Response, onEvent: (e: StreamEvent) => void) {
@@ -137,7 +127,8 @@ export function DebateRoom() {
         error: null,
       });
     } else {
-      void requestDebate(idea);
+      // ?demo=1 plays the scripted debate (no API calls) — handy for UI demos.
+      void requestDebate(idea, new URLSearchParams(window.location.search).has("demo"));
     }
     return () => abortRef.current?.abort();
   }, [router, requestDebate]);
@@ -244,7 +235,7 @@ export function DebateRoom() {
                   line={line}
                   index={snap.index}
                   speaking={snap.status === "playing"}
-                  analyser={engine?.analyser ?? null}
+                  progress={engine?.progress ?? null}
                   deliberating={deliberating}
                   done={done}
                   present={started ? null : present}
@@ -267,26 +258,18 @@ export function DebateRoom() {
             </div>
 
             {/* Side */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 [&>*]:shrink-0">
               {engine && !deliberating && !done && (
                 <Caption line={line} index={snap.index} progress={engine.progress} emptyText={waitingText} />
               )}
               {session && deliberating && (
-                <>
-                  <GroupChat
-                    key={chatKey}
-                    caseNo={caseNo}
-                    waiting={lines.length === 0}
-                    onJoin={(id) => setPresent((p) => (p.includes(id) ? p : [...p, id]))}
-                    onAssembled={() => setAssembled(true)}
-                  />
-                  <div className="flex items-center justify-between gap-3 border-[3px] border-ink bg-paper px-4 py-3 shadow-brutal-sm">
-                    <DeliberatingLoader messages={LOADING_MESSAGES} compact />
-                    <BrutalButton size="sm" tone="paper" cursor="skip" onClick={() => setAssembled(true)}>
-                      Skip intro
-                    </BrutalButton>
-                  </div>
-                </>
+                <GroupChat
+                  key={chatKey}
+                  caseNo={caseNo}
+                  waiting={lines.length === 0}
+                  onJoin={(id) => setPresent((p) => (p.includes(id) ? p : [...p, id]))}
+                  onAssembled={() => setAssembled(true)}
+                />
               )}
 
               {session?.error && (

@@ -38,7 +38,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: [],
     brief:
       "the moderator. Opens the session in one line and closes with the verdict. Measured, dry wit, never rambles.",
-    joinLine: "Panel, we have a new case. Read it, form an opinion, keep it short.",
+    joinLine: "New case. Keep it short.",
     voiceId: "onwK4e9ZLuTAKqWW03F9",
     voiceName: "Daniel",
   },
@@ -53,7 +53,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: ["impact"],
     brief:
       "a skeptical venture capitalist. Cares about who pays, market size and why now. Blunt, dry, short sentences.",
-    joinLine: "I've got four minutes. Somebody tell me who pays.",
+    joinLine: "Who pays? Go.",
     voiceId: "nPczCjzI2devNBz1zQrb",
     voiceName: "Brian",
   },
@@ -68,7 +68,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: ["feasibility", "techDepth"],
     brief:
       "a pragmatic senior engineer. Cares whether it can be built in a hackathon, which APIs and data it needs, and where it breaks. Concrete, names specific tech.",
-    joinLine: "Reading it now. Already counting the APIs.",
+    joinLine: "Counting the APIs already.",
     voiceId: "IKne3meq5aSn9XLyUdCD",
     voiceName: "Charlie",
   },
@@ -83,7 +83,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: ["originality", "demoWow"],
     brief:
       "a product designer and hype person. Cares about delight, novelty and the one demo moment people remember. Energetic, vivid.",
-    joinLine: "Ooh. I can already see the demo. Don't ruin it, Shark.",
+    joinLine: "Ooh, I can see the demo.",
     voiceId: "cgSgspJ2msm6clMCkdW9",
     voiceName: "Jessica",
   },
@@ -98,7 +98,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: [],
     brief:
       "an early-stage angel investor. Cares about the founders' unfair advantage, the story and whether someone would love this. Warm but probing.",
-    joinLine: "Joining late, sorry. Who's the team behind this one?",
+    joinLine: "Sorry, late. Who is the team?",
     voiceId: "EXAVITQu4vr4xnSDxMaL",
     voiceName: "Sarah",
   },
@@ -113,7 +113,7 @@ export const JUDGES: Record<JudgeId, Judge> = {
     owns: [],
     brief:
       "a former startup founder who ran growth. Cares about distribution, the first hundred users and what the launch looks like. Practical, a little impatient.",
-    joinLine: "Here. My question is going to be distribution, just so you know.",
+    joinLine: "Here. Distribution is my question.",
     voiceId: "JBFqnCBsd6RMkjVDRZzb",
     voiceName: "George",
   },

@@ -60,14 +60,11 @@
   to { stroke-dashoffset: -24; }
 }
 @keyframes talk {
-  0%, 100% { transform: scaleY(0.4); }
-  20% { transform: scaleY(1.7); }
-  45% { transform: scaleY(0.8); }
-  65% { transform: scaleY(1.9); }
-  85% { transform: scaleY(0.6); }
+  from { transform: scaleY(0.5); }
+  to { transform: scaleY(1.5); }
 }
 .judge-mouth-talk {
-  animation: talk 0.42s steps(4) infinite;
+  animation: talk 0.32s ease-in-out infinite alternate;
 }
 
 html {

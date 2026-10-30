@@ -137,6 +137,12 @@ export function Cursor() {
     };
     const onUp = () => setPressed(false);
     const onLeave = () => setVisible(false);
+    // The hovered element can vanish under a still pointer (e.g. a "Retry"
+    // button replaced by new UI); re-hit-test so the sticker doesn't linger.
+    const sweep = setInterval(() => {
+      const s = state.current;
+      if (s.target && !s.target.isConnected && s.x >= 0) update(document.elementFromPoint(s.x, s.y));
+    }, 250);
 
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -144,6 +150,7 @@ export function Cursor() {
     window.addEventListener("pointerup", onUp);
     document.addEventListener("pointerleave", onLeave);
     return () => {
+      clearInterval(sweep);
       root.classList.remove("has-custom-cursor");
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("scroll", onScroll);

@@ -27,11 +27,13 @@ function rng(seed: number) {
   };
 }
 
+const STOPWORDS = new Set(["that", "where", "with", "your", "which", "what", "when", "from", "into", "until", "they", "them", "this", "while", "about", "their"]);
+
 function shortTitle(idea: string) {
   const words = idea
     .replace(/[^\p{L}\p{N}\s-]/gu, "")
     .split(/\s+/)
-    .filter((w) => w.length > 3)
+    .filter((w) => w.length > 3 && !STOPWORDS.has(w.toLowerCase()))
     .slice(0, 3);
   return words.length ? words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") : "The Idea";
 }

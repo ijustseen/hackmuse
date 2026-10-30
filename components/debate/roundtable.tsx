@@ -1,15 +1,20 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, animate, motion, motionValue, useMotionValue, useTransform, type MotionValue } from "motion/react";
+import { useEffect, useRef } from "react";
 import { JudgeAvatar } from "@/components/judge-avatar";
 import { JUDGES, JUDGE_ORDER, type JudgeId } from "@/lib/judges";
 import type { Debate, DebateLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Waveform } from "./waveform";
 
 // Seats sit evenly around the table, the Chair at the head (north), clockwise.
 const SEAT_RADIUS = 39;
 const BEAM_RADIUS = 26;
+/** The table is 40% of the stage wide, so its rim sits 20% from the centre. */
+const TABLE_RADIUS = 20;
+
+/** Stand-in when there is no engine yet, so the hooks below always have a value. */
+const IDLE_PROGRESS = motionValue(0);
 
 const SEATS = Object.fromEntries(
   JUDGE_ORDER.map((id, i) => {
@@ -41,7 +46,7 @@ export function Roundtable({
   line,
   index,
   speaking,
-  analyser,
+  progress,
   deliberating = false,
   done = false,
   present = null,
@@ -55,30 +60,40 @@ export function Roundtable({
   line: DebateLine | null;
   index: number;
   speaking: boolean;
-  analyser: AnalyserNode | null;
+  /** 0 to 1 through the current line. */
+  progress: MotionValue<number> | null;
   deliberating?: boolean;
   done?: boolean;
 }) {
   const active = line?.speaker ?? null;
+  const fill = useTransform(progress ?? IDLE_PROGRESS, [0, 1], [0, 1], { clamp: true });
+
+  // Mic token: a wrapper centred on the table, rotated so the token on its edge
+  // lands at the speaker's seat angle. 0deg = the token at the top (the Chair).
+  const rotation = useMotionValue(0);
+  const counterRotation = useTransform(rotation, (v) => -v);
+  const shown = useRef(false);
+  const micOn = active !== null && !done;
+  useEffect(() => {
+    if (!active || done) {
+      shown.current = false;
+      return;
+    }
+    const target = SEATS[active].angle + 90;
+    if (!shown.current) {
+      // First appearance: place it without gliding across the table.
+      rotation.set(target);
+      shown.current = true;
+      return;
+    }
+    const current = rotation.get();
+    const delta = ((((target - current) % 360) + 540) % 360) - 180; // shortest signed turn
+    const controls = animate(rotation, current + delta, { type: "spring", stiffness: 70, damping: 16 });
+    return () => controls.stop();
+  }, [active, done, rotation]);
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[600px] select-none">
-      {/* Live-mic ring in the speaker's colour */}
-      <AnimatePresence>
-        {line && speaking && !done && (
-          <motion.div
-            key={`ring-${line.speaker}`}
-            aria-hidden
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1, rotate: 360 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ rotate: { repeat: Infinity, duration: 14, ease: "linear" }, default: { duration: 0.3 } }}
-            className="absolute left-1/2 top-1/2 -ml-[23%] -mt-[23%] aspect-square w-[46%] rounded-full border-[5px] border-dashed"
-            style={{ borderColor: JUDGES[line.speaker].color }}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Table */}
       <motion.div
         className="absolute left-1/2 top-1/2 flex aspect-square w-[40%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] border-ink bg-mustard shadow-[10px_10px_0_0_var(--blood)]"
@@ -98,10 +113,30 @@ export function Roundtable({
             <p className="mt-2 font-mono text-[clamp(8px,1.4vw,10px)] font-bold uppercase tracking-wider">
               {done && verdict
                 ? `${verdict.overall} / 100`
-                : `Arg ${String(Math.max(1, index + 1)).padStart(2, "0")} / ${String(total).padStart(2, "0")}`}
+                : `${active ? `${JUDGES[active].short} · ` : "Arg "}${String(Math.max(1, index + 1)).padStart(2, "0")}/${String(total).padStart(2, "0")}`}
             </p>
           )}
         </div>
+      </motion.div>
+
+      {/* Mic token: rides the table's rim to whoever is talking */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[6]"
+        style={{ rotate: rotation }}
+        initial={false}
+        animate={{ opacity: micOn ? 1 : 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <motion.div
+          className="absolute left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center border-[3px] border-ink bg-coral shadow-[3px_3px_0_0_var(--ink)]"
+          style={{ top: `${50 - TABLE_RADIUS}%`, rotate: counterRotation }}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="var(--ink)" strokeWidth={2.5} strokeLinecap="square">
+            <rect x="9" y="3" width="6" height="11" fill="var(--ink)" />
+            <path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3" />
+          </svg>
+        </motion.div>
       </motion.div>
 
       {/* Reply beam: runs along the rim from the speaker to the judge they answer */}
@@ -172,18 +207,16 @@ export function Roundtable({
               style={{ backgroundColor: isActive || done ? judge.color : "var(--paper)" }}
             >
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <JudgeAvatar
-                  id={id}
-                  talking={isActive && speaking}
-                  className="w-8 shrink-0 sm:w-10"
-                />
+                <JudgeAvatar id={id} className="w-8 shrink-0 sm:w-10" />
                 <div className="min-w-0">
                   <p className="truncate font-display text-sm font-black uppercase leading-none sm:text-base">{judge.short}</p>
                   <p className="truncate font-mono text-[7px] font-bold uppercase tracking-wider text-ink/70 sm:text-[8px]">{judge.role}</p>
                 </div>
               </div>
               <div className="mt-1.5 flex items-center justify-between gap-1">
-                <Waveform active={isActive && speaking} analyser={analyser} bars={9} className="h-3.5 sm:h-4" />
+                <div className="h-2 flex-1 border-2 border-ink bg-paper">
+                  {isActive && <motion.div className="h-full origin-left bg-ink" style={{ scaleX: fill }} />}
+                </div>
                 {vote != null && (
                   <motion.span
                     initial={{ scale: 2.5, rotate: -20, opacity: 0 }}
