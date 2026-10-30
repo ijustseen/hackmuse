@@ -227,7 +227,7 @@ Each slide below gives **purpose → layout → exact copy → visuals and motio
   - Kicker: `THE HARD PART`
   - Headline: `WAITING 26 SECONDS KILLS A DEMO. SO WE STREAM.`
   - Chips: `FIRST LINE ≈ 1–2 S` · `FULL DEBATE ≈ 7–13 S` · `SCORES NEVER INVENTED — RE-ASKED IF MISSING`
-- **Motion:** both bars grow at real-time-proportional speed: the coral one finishes almost instantly, then the sage one crawls (sped up 4×, with a `4× SPEED` sticker). The `23×` counter counts up when the sage bar finishes.
+- **Motion:** both bars grow at real-time-proportional speed: the coral one finishes almost instantly, then the sage one crawls (sped up 4×, with a `4× SPEED` sticker). The `≈23×` counter counts up when the sage bar finishes.
 - **Notes:** "Gemma 4 thinks before it answers. With default thinking we waited 26 seconds for the first word. Minimal thinking plus streaming brought that down to about one second."
 
 ### Slide 12: The sales pitch (business model)
