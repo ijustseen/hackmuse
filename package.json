@@ -2,12 +2,14 @@
   "name": "hackmuse",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "test:gemma": "node --env-file-if-exists=.env.local --env-file-if-exists=../.env.local --experimental-strip-types api/aiConnection/testGemma.ts"
+    "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
