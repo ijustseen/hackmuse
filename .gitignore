@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Devpost rows stay local: their terms forbid automated scraping (docs/DECISIONS.md C1)
+/data/devpost-corpus.json
+/data/embeddings.devpost.json
+/scripts/ingest-devpost.mjs
+/.claude/worktrees/

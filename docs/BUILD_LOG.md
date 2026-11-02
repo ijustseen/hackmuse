@@ -150,3 +150,19 @@ clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets 
   way: the hero grid widened past the screen (no-wrap idea chips) — minmax(0) columns; seat names truncated — stacked on phones.
 - Gotchas: Satori (next/og) has no `double` borders and only reads TTF/OTF; Cache Components needs `connection()` in the
   verdict image route; a 390 px headless desktop window is clamped wider, so use device emulation for phone checks.
+
+## 2026-11-02 — week 3: GitHub corpus, embeddings, retrieval in the review
+
+- See DECISIONS C1-C3. `scripts/ingest-github.mjs` wrote 208 repos (ai 40, climate 18, health 36, fintech 40, education 40,
+  general 34) to `data/github-corpus.json`; every repo re-fetched at ingest, 19 excerpts under 60 characters.
+  `scripts/embed-corpus.mjs` embeds new rows only and waits out the free tier's 100 requests/min.
+- `server/gemma/corpus.ts` now ranks by embedding similarity (about 300-480 ms per lookup) and falls back to shared words.
+  Past-project text goes into the prompt inside a `<past_projects>` block labelled as data.
+- Verified on the dev server with a real review of a fridge-recipe idea: parsed, 8 criteria, 5 corpus sources, 3 similar
+  projects, all 8 cited URLs exist in the corpus. **89 s** against 153 s before, from a single run each, and no Google Search
+  sources came back in this run, so part of the gap may be the missing search. `next build` passes; `eslint` has 0 errors.
+- Not done: the corpus has 208 rows, not the plan's 500, and it has no winners, only repos. Embeddings are not in Supabase
+  yet. The 150-row exit check is met, the "winner pattern" evidence is not.
+- Gotchas: Windows git bash has no `/usr/bin/time`; a script outside the repo cannot import `@google/genai`; `.agents`
+  skill templates produce the 2 lint warnings.
+

@@ -8,6 +8,7 @@ import {
   type GemmaSimilarProject,
   type GemmaSource,
 } from "./prompt.ts";
+import { corpusNotes, similarFromCorpus } from "./corpus.ts";
 
 export async function reviewWithGemma(input: GemmaProjectInput): Promise<GemmaReview> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
@@ -17,8 +18,17 @@ export async function reviewWithGemma(input: GemmaProjectInput): Promise<GemmaRe
 
   const model = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
   const ai = new GoogleGenAI({ apiKey });
-  const search = await findSimilarProjects(ai, model, input);
-  const response = await generateScoring(ai, model, buildGemmaPrompt(input, search?.notes ?? null));
+  const [search, devpost] = await Promise.all([
+    findSimilarProjects(ai, model, input),
+    similarFromCorpus(input.projectIdea, 5, ai),
+  ]);
+  const notes = [
+    devpost.length ? `Past Devpost projects from our scraped corpus:\n${corpusNotes(devpost)}` : null,
+    search?.notes ? `Google Search results:\n${search.notes}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const response = await generateScoring(ai, model, buildGemmaPrompt(input, notes || null));
 
   const text = response.text ?? "";
   const parsed = parseReview(text);
@@ -26,11 +36,17 @@ export async function reviewWithGemma(input: GemmaProjectInput): Promise<GemmaRe
   return {
     model,
     parsed: parsed.ok,
-    search: search ? "returned" : "unavailable",
+    search: search || devpost.length ? "returned" : "unavailable",
     missing: parsed.missing,
     criteria: parsed.criteria,
     similarProjects: parsed.similarProjects,
-    sources: search?.sources ?? [],
+    sources: [
+      ...devpost.flatMap((p) => {
+        const uri = p.sourceUrl ?? p.repoUrl;
+        return uri ? [{ title: `${p.name} (${p.hackathon})`, uri }] : [];
+      }),
+      ...(search?.sources ?? []),
+    ],
     queries: search?.queries ?? [],
     rawText: parsed.ok ? null : text || null,
   };

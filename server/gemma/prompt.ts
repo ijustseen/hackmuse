@@ -55,7 +55,7 @@ const criterionLines = gemmaCriteria.map((criterion) => `- ${criterion.id}`).joi
 
 export function buildGemmaPrompt(input: GemmaProjectInput, searchNotes: string | null): string {
   const evidence = searchNotes
-    ? `Similar projects found by a separate Google Search call. Use only these notes and their URLs. Never invent projects, awards, placements, or URLs.\n\n${searchNotes}`
+    ? `Similar past projects found by a Devpost corpus lookup and a separate Google Search call. Use only these notes and their URLs. Never invent projects, awards, placements, or URLs.\n\n${searchNotes}`
     : "No live search results are available. Do not invent projects, awards, placements, or URLs. Say that the search results are missing.";
 
   return `
