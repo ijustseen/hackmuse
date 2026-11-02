@@ -5,18 +5,22 @@ import { motion, useAnimationControls, useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { JudgeAvatar } from "@/components/judge-avatar";
 import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
+import { FeedCard } from "@/components/verdict/feed-card";
+import { FEED_SIZE, FEED_WEIGHT, SHARK_WEIGHT, type FeedResult } from "@/lib/feed";
 import { JUDGES, JUDGE_ORDER, VOTING_JUDGES } from "@/lib/judges";
 import { RUBRIC, SURVIVE_AT, gradeFor, survival } from "@/lib/rubric";
 import type { GemmaReview, ReviewState } from "@/lib/review";
 import type { Debate } from "@/lib/types";
+import type { FeedProgress } from "./arena";
 
-function summary(d: Debate, review: GemmaReview | null) {
+function summary(d: Debate, review: GemmaReview | null, feed: FeedResult | null) {
   const grade = gradeFor(d.overall);
   const criteria = review
     ? review.criteria.map((c) => `• ${c.label}: ${c.score ?? "—"}/100 — ${c.explanation}`)
     : RUBRIC.map((c) => `• ${c.label}: ${d.scores[c.id]?.score ?? "—"}/10 — ${d.scores[c.id]?.note ?? ""}`);
   return [
     `HACKMUSE verdict — "${d.title}": ${d.overall}/100 (${grade.label}). ${survival(d.votes).line}.`,
+    ...(feed ? [`Feed: ${feed.counts.share} of ${FEED_SIZE} would share (${feed.score}/100).`] : []),
     ...criteria,
     ...(review?.similarProjects.length
       ? [`Similar projects: ${review.similarProjects.map((p) => (p.url ? `${p.name} (${p.url})` : p.name)).join("; ")}`]
@@ -31,19 +35,25 @@ function summary(d: Debate, review: GemmaReview | null) {
 
 export function Scorecard({
   debate,
+  sharkScore,
+  feed,
+  final,
   review,
   judgmentId,
   onRetryReview,
   onReplay,
-  onJoinCall,
 }: {
+  /** `overall` is already the headline: sharks 70% + feed 30%. */
   debate: Debate;
+  sharkScore: number;
+  feed: FeedProgress;
+  /** False while the review or the feed is still running: the grade is provisional. */
+  final: boolean;
   review: ReviewState | null;
   /** The saved verdict this scorecard belongs to; the Share button only shows when there is one. */
   judgmentId?: string | null;
   onRetryReview?: () => void;
   onReplay: () => void;
-  onJoinCall: () => void;
 }) {
   const ready = review?.status === "ready" && review.review.criteria.some((c) => c.score !== null) ? review.review : null;
   const ref = useRef<HTMLElement>(null);
@@ -54,6 +64,9 @@ export function Scorecard({
   const [share, setShare] = useState<{ status: "idle" | "busy" | "failed"; url?: string }>({ status: "idle" });
   const grade = gradeFor(debate.overall);
   const survived = survival(debate.votes);
+  const feedResult = feed.result;
+  // If the grade is still provisional when the card appears, the stamp waits and lands when it locks.
+  const [stampDelay, setStampDelay] = useState<number | null>(null);
 
   async function shareVerdict() {
     if (!judgmentId) return;
@@ -72,14 +85,22 @@ export function Scorecard({
 
   useEffect(() => {
     if (!inView) return;
-    const t1 = setTimeout(() => setShown(true), 150);
-    // The stamp lands ~1.4s in; shake the sheet when it hits.
-    const t2 = setTimeout(() => shake.start({ x: [0, -7, 6, -4, 3, 0], rotate: [0, -0.4, 0.3, 0] }), 1550);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [inView, shake]);
+    const t = setTimeout(() => {
+      setShown(true);
+      setStampDelay((d) => d ?? (final ? 1.25 : 0.25));
+    }, 150);
+    return () => clearTimeout(t);
+  }, [inView, final]);
+
+  // Shake the sheet when the stamp hits, which is when the grade locks.
+  useEffect(() => {
+    if (!shown || !final || stampDelay === null) return;
+    const t = setTimeout(
+      () => shake.start({ x: [0, -7, 6, -4, 3, 0], rotate: [0, -0.4, 0.3, 0] }),
+      (stampDelay + 0.3) * 1000,
+    );
+    return () => clearTimeout(t);
+  }, [shown, final, shake, stampDelay]);
 
   return (
     <section ref={ref} id="verdict" className="scroll-mt-20">
@@ -95,13 +116,14 @@ export function Scorecard({
         )}
       </div>
 
-      <motion.div animate={shake} className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]">
+      <motion.div animate={shake} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="flex flex-col gap-6 lg:self-start">
         {/* Overall */}
-        <div className="relative overflow-hidden border-[3px] border-ink bg-paper p-6 shadow-brutal-lg sm:p-8 lg:self-start">
+        <div className="relative overflow-hidden border-[3px] border-ink bg-paper p-6 shadow-brutal-lg sm:p-8">
           <div className="bg-grid absolute inset-0 opacity-60" />
           <div className="relative">
             <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">
-              {ready ? "Overall · research-backed review" : review?.status === "loading" ? "Panel estimate · review pending" : "Overall · panel estimate"}
+              {final ? "Overall" : "Provisional · still scoring"}
             </p>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="font-display text-[clamp(7rem,18vw,11rem)] font-black leading-none tabular-nums">
@@ -110,10 +132,42 @@ export function Scorecard({
               <span className="font-display text-4xl font-black text-ink/40">/100</span>
             </div>
 
+            {/* How the number is made: sharks 70%, feed 30%. */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-wider">
+              <span className="border-2 border-ink bg-coral px-1.5 py-0.5">
+                Sharks {sharkScore} × {Math.round(SHARK_WEIGHT * 100)}%
+              </span>
+              {feedResult ? (
+                <>
+                  <span>+</span>
+                  <span className="border-2 border-ink bg-mustard px-1.5 py-0.5">
+                    Feed {feedResult.score} × {Math.round(FEED_WEIGHT * 100)}%
+                  </span>
+                </>
+              ) : (
+                <span className="text-ink/60">
+                  {feed.status === "failed" ? "· feed unavailable, sharks only" : "· feed still reacting"}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs leading-snug text-ink/60">
+              {ready
+                ? "Shark score: the research-backed review of 8 criteria."
+                : review?.status === "loading"
+                  ? "Shark score: the panel's estimate until the research-backed review lands."
+                  : "Shark score: the panel's own estimate."}
+            </p>
+
+            {!final && (
+              <div className="absolute -top-2 right-0 border-[3px] border-dashed border-ink/40 px-3 py-1.5 text-center text-ink/50 sm:right-2">
+                <p className="font-display text-2xl font-black uppercase leading-none">Pending</p>
+                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em]">Stamp when scored</p>
+              </div>
+            )}
             <motion.div
               initial={{ scale: 3.2, rotate: -28, opacity: 0 }}
-              animate={shown ? { scale: 1, rotate: -9, opacity: 1 } : {}}
-              transition={{ delay: 1.25, type: "spring", stiffness: 420, damping: 18 }}
+              animate={shown && final ? { scale: 1, rotate: -9, opacity: 1 } : {}}
+              transition={{ delay: stampDelay ?? 1.25, type: "spring", stiffness: 420, damping: 18 }}
               className="absolute -top-2 right-0 sm:right-2"
             >
               <div className="border-[5px] border-double border-coral-deep bg-paper/70 px-4 py-2 text-center text-coral-deep [filter:url(#stamp-rough)]">
@@ -156,6 +210,20 @@ export function Scorecard({
               })}
             </div>
           </div>
+        </div>
+
+        {feedResult ? (
+          <FeedCard feed={feedResult} showAll />
+        ) : (
+          <div className="border-[3px] border-dashed border-ink/40 bg-paper p-4 text-sm leading-snug text-ink/70">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink">The feed · {FEED_SIZE} people</p>
+            <p className="mt-1">
+              {feed.status === "failed"
+                ? `${feed.error ?? "The feed failed."} The grade uses the sharks alone.`
+                : "Still reacting. The grade updates when the feed settles."}
+            </p>
+          </div>
+        )}
         </div>
 
         {/* Criteria */}
@@ -212,32 +280,6 @@ export function Scorecard({
         </div>
       </motion.div>
 
-      {/* Join the call */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={shown ? { opacity: 1, y: 0 } : {}}
-        transition={{ delay: 2.4 }}
-        className="mt-10 flex flex-col items-start justify-between gap-5 border-[3px] border-ink bg-ink p-6 text-cream shadow-brutal-lg sm:flex-row sm:items-center"
-      >
-        <div className="flex items-center gap-4">
-          <div className="flex -space-x-2">
-            {VOTING_JUDGES.map((id) => (
-              <JudgeAvatar key={id} id={id} className="w-10" />
-            ))}
-          </div>
-          <div>
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-coral">
-              <span className="mr-2 inline-block h-2 w-2 animate-blink bg-coral" />
-              Panel is still on the line
-            </p>
-            <p className="font-display text-3xl font-black uppercase leading-none">Join the call. Hear them argue.</p>
-          </div>
-        </div>
-        <BrutalButton size="lg" cursor="join" onClick={onJoinCall}>
-          ▶ Join the call
-        </BrutalButton>
-      </motion.div>
-
       <div className="mt-8 flex flex-wrap gap-4">
         <BrutalLink href="/#pitch" size="lg" cursor="new">
           Grade another idea →
@@ -251,7 +293,7 @@ export function Scorecard({
           cursor="copy"
           onClick={async () => {
             try {
-              await navigator.clipboard.writeText(summary(debate, ready));
+              await navigator.clipboard.writeText(summary(debate, ready, feedResult));
               setCopied(true);
               setTimeout(() => setCopied(false), 1800);
             } catch {

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRef, useSyncExternalStore } from "react";
 import { JudgeAvatar } from "@/components/judge-avatar";
 import { startDemoSession } from "@/lib/idea";
-import { DEBATE_LENGTH, JUDGES, JUDGE_ORDER, VOTING_JUDGES } from "@/lib/judges";
+import { FEED_SIZE } from "@/lib/feed";
+import { JUDGES, JUDGE_ORDER, VOTING_JUDGES } from "@/lib/judges";
 import { IdeaForm } from "./idea-form";
 
 // Parallax only on wide screens: on a phone the headline lines would slide into each other mid-scroll.
@@ -31,7 +32,7 @@ export function Hero() {
     <section ref={ref} id="pitch" className="relative scroll-mt-16 overflow-hidden border-b-[3px] border-ink">
       <div className="bg-grid absolute inset-0" />
       {/* minmax(0, …) columns: without them the long no-wrap idea chips widen the column past a phone screen. */}
-      <div className="relative mx-auto grid max-w-7xl grid-cols-1 gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10 lg:pb-28 lg:pt-20">
+      <div className="relative mx-auto grid max-w-7xl grid-cols-1 gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center lg:gap-10 lg:pb-28 lg:pt-20">
         <div className="relative min-w-0">
           <p
             className="anim-fade-up inline-flex items-center gap-2 border-2 border-ink bg-paper px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.25em] shadow-ink-sm"
@@ -68,11 +69,11 @@ export function Hero() {
           {/* The largest text on a phone: it moves in but is never invisible, so it paints at once. */}
           <p style={delay(0.3)} className="anim-nudge mt-10 max-w-lg text-lg leading-relaxed text-ink/80"
           >
-            Pitch it in a few sentences. Five AI sharks and the Tank Master argue about it{" "}
+            Pitch it in a few sentences. Five AI sharks tear into it while 30 simulated people from social media decide whether they{" "}
             <em className="font-semibold not-italic text-ink underline decoration-coral decoration-4 underline-offset-4">
-              out loud
+              would share it
             </em>
-            , then tell you which sharks it survived and what to fix before the judges see it.
+            . Then you see what survived and what to fix before the judges do.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
@@ -85,7 +86,7 @@ export function Hero() {
                 ))}
               </div>
               <p className="whitespace-nowrap font-mono text-xs font-bold uppercase leading-tight tracking-wider">
-                {VOTING_JUDGES.length} sharks · {DEBATE_LENGTH} arguments
+                {VOTING_JUDGES.length} sharks · {FEED_SIZE} people
                 <br />
                 ~90 seconds · free
               </p>

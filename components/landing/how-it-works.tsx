@@ -70,7 +70,7 @@ const STEPS: StackItem[] = [
   {
     kicker: "Step 02",
     title: "Watch them circle",
-    body: "Gemma 4 writes a real argument between five sharks and the Tank Master, and ElevenLabs gives each one a voice. The first shark speaks within seconds.",
+    body: "Five sharks circle on one side, a school of 30 people from social media on the other. Gemma 4 writes the sharks' argument and runs the crowd. The first bite lands within seconds.",
     color: "var(--mustard)",
     art: TableArt,
   },

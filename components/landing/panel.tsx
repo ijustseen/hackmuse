@@ -77,9 +77,6 @@ function JudgeCard({ judge, index }: { judge: Judge; index: number }) {
                 </span>
               ))}
             </div>
-            <p className="mt-4 border-t-2 border-dashed border-ink/30 pt-3 font-mono text-[10px] uppercase tracking-wider text-ink/70">
-              Voice · {judge.voiceName} / ElevenLabs
-            </p>
           </div>
         </SpotlightCard>
       </motion.div>
@@ -101,7 +98,7 @@ export function Panel() {
             />
           </div>
           <p className="max-w-sm text-base leading-relaxed text-ink/80">
-            Each shark hunts for one way ideas die, watches its own criteria and speaks in its own voice. They don&apos;t agree,
+            Each shark hunts for one way ideas die, and watches its own criteria. They don&apos;t agree,
             and that&apos;s the point: an idea that survives all five is hard to kill on stage.
           </p>
         </div>

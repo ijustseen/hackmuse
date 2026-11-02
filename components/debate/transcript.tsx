@@ -26,7 +26,7 @@ export function Transcript({
   }, [visible.length]);
 
   return (
-    <div className="flex h-full min-h-[18rem] flex-col border-[3px] border-ink bg-ink text-cream shadow-brutal">
+    <div className="flex min-h-[18rem] flex-col border-[3px] border-ink bg-ink text-cream shadow-brutal">
       <div className="flex items-center justify-between border-b-2 border-cream/20 px-3 py-2">
         <div className="flex gap-1.5">
           <span className="h-3 w-3 border border-ink bg-coral" />
@@ -56,7 +56,7 @@ export function Transcript({
           </motion.button>
         ))}
         {lines.length > visible.length && (
-          <p className="text-cream/40">… {lines.length - visible.length} more written, waiting to be heard</p>
+          <p className="text-cream/40">… {lines.length - visible.length} more written, still typing</p>
         )}
         {!(complete && index >= lines.length) && <span className="inline-block h-4 w-2 animate-blink bg-cream align-middle" />}
       </div>

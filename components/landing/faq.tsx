@@ -14,7 +14,7 @@ const FAQ = [
   },
   {
     q: "Which AI is behind it?",
-    a: "Gemma 4, Google's open-weight model, writes the debate and the panel's scores, and ElevenLabs gives each shark a voice. A second, slower Gemma pass searches the web for similar projects and scores the eight criteria 0–100.",
+    a: "Gemma 4, Google's open-weight model, writes the debate and the panel's scores, and plays the 30 people in the feed. A second, slower Gemma pass compares your idea with past hackathon projects and scores the eight criteria 0–100.",
   },
   {
     q: "Does a high score mean I'll win?",
@@ -22,11 +22,15 @@ const FAQ = [
   },
   {
     q: "Who sees my idea?",
-    a: "To run the panel, your text goes to Google's Gemma API and the spoken lines to ElevenLabs. We store the idea and its verdict so a share link can work, but nobody else can read it unless you press Share. Shared links are hidden from search engines.",
+    a: "To run the panel, your text goes to Google's Gemma API. We store the idea and its verdict so a share link can work, but nobody else can read it unless you press Share. Shared links are hidden from search engines.",
   },
   {
     q: "Can I use my hackathon's real rules?",
     a: "Yes. Pick “My event” and paste the rules, prizes and judging criteria. The sharks judge fit against them instead of a generic hackathon.",
+  },
+  {
+    q: "Who are the 30 people in the feed?",
+    a: "Simulated, not real. Gemma writes 30 personas across TikTok, Instagram, X, LinkedIn and Reddit, mostly people your idea is for plus some who are not. They react, see each other's posts and react again. The feed counts for 30% of the grade; the sharks count for 70%.",
   },
   {
     q: "Why sharks?",

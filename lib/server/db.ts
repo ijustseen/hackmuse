@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { FeedResult } from "../feed";
 import type { GemmaReview } from "../review";
 import type { Debate } from "../types";
 
@@ -90,6 +91,18 @@ export async function saveReview(id: string, review: GemmaReview): Promise<void>
   }
 }
 
+/** Needs migration 0002 (judgments.feed). Before it is applied the save fails, is logged, and nothing else breaks. */
+export async function saveFeed(id: string, feed: FeedResult): Promise<void> {
+  const client = db();
+  if (!client) return;
+  try {
+    const { error } = await client.from("judgments").update({ feed }).eq("id", id).is("feed", null);
+    if (error) throw error;
+  } catch (error) {
+    console.error("[db] could not save the feed:", error);
+  }
+}
+
 /** Makes the idea behind a judgment readable by anyone with the link. */
 export async function shareJudgment(id: string): Promise<"ok" | "missing" | "unsaved" | "offline" | "error"> {
   const client = db();
@@ -114,19 +127,22 @@ export interface PublicVerdict {
   hackathonUrl: string;
   debate: Debate;
   review: GemmaReview | null;
+  feed: FeedResult | null;
   createdAt: string;
 }
+
+const VERDICT_COLUMNS = "id, idea_text, hackathon_url, debate, review, created_at, ideas!inner(is_public)";
 
 /** A verdict that was shared, or null: unknown id, not shared, or not finished. */
 export async function getPublicVerdict(id: string): Promise<PublicVerdict | null> {
   const client = db();
   if (!client) return null;
   try {
-    const { data, error } = await client
-      .from("judgments")
-      .select("id, idea_text, hackathon_url, debate, review, created_at, ideas!inner(is_public)")
-      .eq("id", id)
-      .maybeSingle();
+    const read = (columns: string) =>
+      client.from("judgments").select(columns).eq("id", id).maybeSingle<Record<string, unknown>>();
+    let { data, error } = await read(`${VERDICT_COLUMNS}, feed`);
+    // 42703 = undefined column: migration 0002 is not applied yet, so read the verdict without the feed.
+    if (error?.code === "42703") ({ data, error } = await read(VERDICT_COLUMNS));
     if (error) throw error;
     if (!data?.debate) return null;
     const ideas = data.ideas as { is_public: boolean } | { is_public: boolean }[] | null;
@@ -138,6 +154,7 @@ export async function getPublicVerdict(id: string): Promise<PublicVerdict | null
       hackathonUrl: data.hackathon_url as string,
       debate: data.debate as Debate,
       review: (data.review as GemmaReview | null) ?? null,
+      feed: (data.feed as FeedResult | null | undefined) ?? null,
       createdAt: data.created_at as string,
     };
   } catch (error) {

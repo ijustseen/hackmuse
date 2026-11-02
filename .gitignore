@@ -46,3 +46,4 @@ next-env.d.ts
 /data/embeddings.devpost.json
 /scripts/ingest-devpost.mjs
 /.claude/worktrees/
+/.scratch/

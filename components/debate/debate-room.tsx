@@ -8,36 +8,39 @@ import { BrutalButton, BrutalLink } from "@/components/ui/brutal-button";
 import { RandomizedText } from "@/components/ui/randomized-text";
 import { DebateEngine, IDLE_SNAPSHOT, type PlayerSnapshot } from "@/lib/client/debate-engine";
 import { ensureJudgment } from "@/lib/client/judgment";
+import { readNdjson } from "@/lib/client/ndjson";
+import { headlineScore, type FeedEvent } from "@/lib/feed";
 import {
   isDemoSession,
   loadDebate,
+  loadFeed,
   loadHackathon,
   loadIdea,
   loadJudgmentId,
   loadReview,
   saveDebate,
+  saveFeed,
   saveReview,
   startDemoSession,
 } from "@/lib/idea";
-import { DEBATE_LENGTH, type JudgeId } from "@/lib/judges";
+import { DEBATE_LENGTH } from "@/lib/judges";
 import { fetchReview, reviewOverall, type ReviewState } from "@/lib/review";
 import type { Debate, StreamEvent } from "@/lib/types";
 import dynamic from "next/dynamic";
+import { Arena, IDLE_FEED, type FeedProgress } from "./arena";
 import { Caption } from "./caption";
-import { GroupChat } from "./group-chat";
 import { Roundtable } from "./roundtable";
 import { Transcript } from "./transcript";
 
-// Shown only after the debate (scorecard) or on demand (call view), so they load in their own
-// chunks. The scorecard chunk is fetched as soon as the debate starts; see the effect below.
+// Shown only after the debate, so it loads in its own chunk, fetched as soon as the debate starts.
 const loadScorecard = () => import("./scorecard");
 const Scorecard = dynamic(() => loadScorecard().then((m) => m.Scorecard), { ssr: false });
-const CallView = dynamic(() => import("./call-view").then((m) => m.CallView), { ssr: false });
 
 interface Session {
   idea: string;
   engine: DebateEngine;
   fromCache: boolean;
+  demo: boolean;
   title: string | null;
   source: Debate["source"] | null;
   model: string | null;
@@ -49,40 +52,20 @@ interface Session {
 const noopSubscribe = () => () => {};
 const idleSnapshot = () => IDLE_SNAPSHOT;
 
-/** Reads an NDJSON response body, calling onEvent for each parsed line. */
-async function readEvents(res: Response, onEvent: (e: StreamEvent) => void) {
-  if (!res.body) throw new Error("Empty response");
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (value) buf += decoder.decode(value, { stream: true });
-    let nl: number;
-    while ((nl = buf.indexOf("\n")) !== -1) {
-      const raw = buf.slice(0, nl).trim();
-      buf = buf.slice(nl + 1);
-      if (raw) onEvent(JSON.parse(raw) as StreamEvent);
-    }
-    if (done) break;
-  }
-}
 
 export function DebateRoom() {
   const lenis = useLenis();
   const [session, setSession] = useState<Session | null>(null);
-  // Waiting room: who has joined the group chat, and whether everyone is in.
-  const [present, setPresent] = useState<JudgeId[]>([]);
   const [assembled, setAssembled] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
-  const [chatKey, setChatKey] = useState(0);
   // True when this tab has no idea to judge (a link opened in a fresh tab, say).
   const [empty, setEmpty] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const reviewAbortRef = useRef<AbortController | null>(null);
-  // Gemma + Google Search review (the teammate backend). Runs in parallel with the
-  // debate and usually lands while the panel is still talking.
+  const feedAbortRef = useRef<AbortController | null>(null);
+  // Gemma research-backed review: runs in parallel and usually lands after the debate.
   const [review, setReview] = useState<ReviewState | null>(null);
+  // The feed: 30 simulated people, in parallel with the debate.
+  const [feed, setFeed] = useState<FeedProgress>(IDLE_FEED);
 
   const requestReview = useCallback(async (idea: string) => {
     reviewAbortRef.current?.abort();
@@ -102,17 +85,49 @@ export function DebateRoom() {
     }
   }, []);
 
+  const requestFeed = useCallback(async (idea: string, demo: boolean) => {
+    feedAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    feedAbortRef.current = ctrl;
+    setFeed({ ...IDLE_FEED, status: "running" });
+    try {
+      const judgmentId = demo ? null : await ensureJudgment(idea);
+      const res = await fetch("/api/feed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea, demo, judgmentId }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? `Feed failed (${res.status})`);
+      }
+      let finished = false;
+      await readNdjson<FeedEvent>(res, (e) => {
+        if (e.type === "people") setFeed((f) => ({ ...f, people: e.people }));
+        else if (e.type === "round") setFeed((f) => (e.round === 1 ? { ...f, first: e.reactions } : { ...f, final: e.reactions }));
+        else if (e.type === "feed") {
+          finished = true;
+          saveFeed(idea, e.feed);
+          setFeed((f) => ({ ...f, status: "done", result: e.feed, final: e.feed.people.map((p) => p.final) }));
+        } else if (e.type === "error") throw new Error(e.message);
+      });
+      if (!finished) throw new Error("The feed stream ended early.");
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      setFeed((f) => ({ ...f, status: "failed", error: err instanceof Error ? err.message : "The feed failed." }));
+    }
+  }, []);
+
   const requestDebate = useCallback(async (idea: string, demo = false) => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const engine = new DebateEngine();
-    setPresent([]);
     setAssembled(false);
-    setChatKey((k) => k + 1);
     const update = (patch: Partial<Session>) =>
       setSession((s) => (s && s.engine === engine ? { ...s, ...patch } : s));
-    setSession({ idea, engine, fromCache: false, title: null, source: null, model: null, debate: null, error: null });
+    setSession({ idea, engine, fromCache: false, demo, title: null, source: null, model: null, debate: null, error: null });
 
     try {
       // Demo debates are never saved, so they need no saved verdict to fill in.
@@ -129,7 +144,7 @@ export function DebateRoom() {
         throw new Error(data?.error ?? `Request failed (${res.status})`);
       }
       let finished = false;
-      await readEvents(res, (e) => {
+      await readNdjson<StreamEvent>(res, (e) => {
         if (e.type === "meta") update({ source: e.source, model: e.model });
         else if (e.type === "title") update({ title: e.title });
         else if (e.type === "line") engine.push(e.line);
@@ -160,10 +175,12 @@ export function DebateRoom() {
     setEmpty(false);
     const cached = loadDebate(idea);
     if (cached) {
+      setAssembled(true);
       setSession({
         idea,
         engine: new DebateEngine(cached.lines, true),
         fromCache: true,
+        demo: cached.source === "demo",
         title: cached.title,
         source: cached.source,
         model: cached.model,
@@ -174,18 +191,25 @@ export function DebateRoom() {
       // The demo plays the scripted debate: no API calls, nothing saved.
       void requestDebate(idea, demo);
     }
+    const cachedFeed = loadFeed(idea);
+    if (cachedFeed) {
+      const first = cachedFeed.people.map((p) => p.first);
+      const final = cachedFeed.people.map((p) => p.final);
+      setFeed({ status: "done", people: cachedFeed.people, first, final, result: cachedFeed });
+    } else void requestFeed(idea, demo);
     const cachedReview = loadReview(idea);
     if (cachedReview) setReview({ status: "ready", review: cachedReview });
     else if (!demo) void requestReview(idea);
-  }, [requestDebate, requestReview]);
+    else setReview(null);
+  }, [requestDebate, requestFeed, requestReview]);
 
   useEffect(() => {
     // sessionStorage is only readable after mount, so state has to be set from here.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     begin();
     return () => {
       abortRef.current?.abort();
       reviewAbortRef.current?.abort();
+      feedAbortRef.current?.abort();
     };
   }, [begin]);
 
@@ -202,37 +226,66 @@ export function DebateRoom() {
   }, [engine, fromCache, assembled]);
 
   const snap = useSyncExternalStore(engine?.subscribe ?? noopSubscribe, engine?.getSnapshot ?? idleSnapshot, idleSnapshot);
-  // Once the research-backed review lands, its score becomes the headline number.
+
+  // The grade: sharks 70% (the research-backed review once it lands, the panel's estimate until
+  // then) plus the feed 30%. It is provisional until both have finished.
   const reviewScore = review?.status === "ready" ? reviewOverall(review.review) : null;
   const rawDebate = session?.debate ?? null;
+  const sharkScore = reviewScore ?? rawDebate?.overall ?? null;
+  const feedResult = feed.result;
   const debate = useMemo(
-    () => (rawDebate && reviewScore !== null ? { ...rawDebate, overall: reviewScore } : rawDebate),
-    [rawDebate, reviewScore],
+    () => (rawDebate && sharkScore !== null ? { ...rawDebate, overall: headlineScore(sharkScore, feedResult) } : rawDebate),
+    [rawDebate, sharkScore, feedResult],
   );
+  const final = review?.status !== "loading" && feed.status !== "running";
+
   const lines = snap.lines;
   const done = snap.status === "done" && debate !== null;
   const line = snap.index >= 0 && snap.index < lines.length ? lines[snap.index] : null;
   const started = fromCache || (assembled && lines.length > 0);
-  const deliberating = !session || (!started && !session.error);
   const total = snap.complete ? lines.length : Math.max(DEBATE_LENGTH, lines.length);
-  const tankNo = session ? String(hashIdea(session.idea) % 10000).padStart(4, "0") : "0000";
 
   // Warm the scorecard chunk while the sharks talk, so the verdict appears without a pause.
   useEffect(() => {
     if (started) void loadScorecard();
   }, [started]);
 
-  // Glide down to the scorecard when the Chair finishes.
+  // Glide down to the scorecard once it exists: it mounts from its own chunk, so wait for it
+  // rather than scrolling to an element that isn't there yet.
+  const glided = useRef(false);
   useEffect(() => {
-    if (!done || fromCache) return;
-    const t = setTimeout(() => {
-      if (lenis) lenis.scrollTo("#verdict", { offset: -80, duration: 1.6 });
-      else document.getElementById("verdict")?.scrollIntoView({ behavior: "smooth" });
-    }, 500);
-    return () => clearTimeout(t);
+    if (!done || fromCache || glided.current) return;
+    let raf = 0;
+    const startAt = performance.now();
+    const tryScroll = () => {
+      const el = document.getElementById("verdict");
+      if (el) {
+        glided.current = true;
+        // Two frames for the new section to lay out, then refresh Lenis's cached page height: with a
+        // stale height it clamps the target and the glide stops short of the scorecard.
+        raf = requestAnimationFrame(() => {
+          raf = requestAnimationFrame(() => {
+            if (lenis) {
+              lenis.resize();
+              // The section's scroll-margin (scroll-mt-20) keeps it clear of the sticky header; Lenis honours it.
+              lenis.scrollTo(el, { duration: 1.8, easing: easeInOutCubic, force: true });
+            } else {
+              el.scrollIntoView({ behavior: "smooth" });
+            }
+          });
+        });
+      } else if (performance.now() - startAt < 4000) {
+        raf = requestAnimationFrame(tryScroll);
+      }
+    };
+    const t = setTimeout(() => (raf = requestAnimationFrame(tryScroll)), 700);
+    return () => {
+      clearTimeout(t);
+      cancelAnimationFrame(raf);
+    };
   }, [done, fromCache, lenis]);
 
-  // Keyboard: space play/pause, arrows step, M mute.
+  // Keyboard: space play/pause, arrows step.
   useEffect(() => {
     if (!engine) return;
     const onKey = (e: KeyboardEvent) => {
@@ -242,7 +295,6 @@ export function DebateRoom() {
         engine.toggle();
       } else if (e.key === "ArrowRight") engine.next();
       else if (e.key === "ArrowLeft") engine.prev();
-      else if (e.key.toLowerCase() === "m") engine.setMuted(!engine.getSnapshot().muted);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -306,11 +358,6 @@ export function DebateRoom() {
                 {session.source === "gemma" ? `Gemma · ${session.model}` : "Demo mode"}
               </span>
             )}
-            {snap.voice !== "pending" && (
-              <span className="hidden border-2 border-cream/40 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-widest md:inline-block">
-                {snap.voice === "on" ? "Voices · ElevenLabs" : "Captions only"}
-              </span>
-            )}
             <BrutalLink href="/#pitch" size="sm" cursor="new">
               New idea
             </BrutalLink>
@@ -322,8 +369,8 @@ export function DebateRoom() {
         <div className="bg-grid pointer-events-none absolute inset-0" />
         <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6">
           {/* The idea in the tank */}
-          <div className="mb-8 flex flex-col gap-3 border-[3px] border-ink bg-paper p-4 shadow-brutal-sm sm:flex-row sm:items-center">
-            <span className="shrink-0 border-2 border-ink bg-ink px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-cream">
+          <div className="mb-6 flex flex-col gap-3 border-[3px] border-ink bg-paper p-4 shadow-brutal-sm sm:flex-row sm:items-center">
+            <span className="shrink-0 self-start border-2 border-ink bg-ink px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-cream sm:self-auto">
               The idea
             </span>
             <p className="line-clamp-2 text-base font-medium leading-snug">
@@ -331,139 +378,118 @@ export function DebateRoom() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            {/* Stage */}
-            <div className="flex flex-col gap-8 lg:sticky lg:top-24 lg:self-start">
-              <div className="relative">
-                <Roundtable
-                  title={session?.title ?? null}
-                  total={total}
-                  verdict={debate}
-                  line={line}
-                  index={snap.index}
-                  speaking={snap.status === "playing"}
-                  progress={engine?.progress ?? null}
-                  deliberating={deliberating}
-                  done={done}
-                  present={started ? null : present}
-                />
-                <AnimatePresence>
-                  {engine && snap.status === "blocked" && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 z-20 flex items-center justify-center bg-cream/60 backdrop-blur-[2px]"
-                    >
-                      <BrutalButton size="lg" cursor="start" onClick={() => engine.unblock()}>
-                        ▶ Open the floor
-                      </BrutalButton>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+          {session && (
+            <Arena
+              title={session.title}
+              idea={session.idea}
+              feed={feed}
+              speaker={line?.speaker ?? null}
+              lineIndex={snap.index}
+              assembled={assembled}
+              done={done}
+              settled={fromCache}
+              compact={started}
+              onAssembled={() => setAssembled(true)}
+            />
+          )}
+
+          {session && assembled && !started && !session.error && (
+            <p role="status" className="mt-4 text-center font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ink/70">
+              <span className="mr-2 inline-block h-2 w-2 animate-blink bg-coral" />
+              Gemma 4 is writing the sharks&apos; first bites…
+            </p>
+          )}
+
+          {session?.error && (
+            <div role="alert" className="mx-auto mt-8 max-w-2xl border-[3px] border-ink bg-coral p-5 shadow-brutal">
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">The sharks swam off</p>
+              <h1 className="mt-1 font-display text-5xl font-black uppercase leading-[0.9]">No verdict</h1>
+              <p className="mt-3 text-base">{session.error}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <BrutalButton tone="paper" cursor="retry" onClick={() => requestDebate(session.idea)}>
+                  Try again
+                </BrutalButton>
+                <BrutalButton tone="sage" cursor="demo" onClick={() => requestDebate(session.idea, true)}>
+                  Run demo debate
+                </BrutalButton>
+                <BrutalLink href="/#pitch" tone="ink" cursor="edit">
+                  Edit idea
+                </BrutalLink>
               </div>
             </div>
+          )}
 
-            {/* Side */}
-            <div className="flex flex-col gap-6 [&>*]:shrink-0">
-              {engine && !deliberating && !done && (
-                <Caption line={line} index={snap.index} progress={engine.progress} emptyText={waitingText} />
-              )}
-              {session && deliberating && (
-                <GroupChat
-                  key={chatKey}
-                  tankNo={tankNo}
-                  waiting={lines.length === 0}
-                  onJoin={(id) => setPresent((p) => (p.includes(id) ? p : [...p, id]))}
-                  onAssembled={() => setAssembled(true)}
-                />
-              )}
-
-              {session?.error && (
-                <div role="alert" className="border-[3px] border-ink bg-coral p-5 shadow-brutal">
-                  <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">The sharks swam off</p>
-                  <h1 className="mt-1 font-display text-5xl font-black uppercase leading-[0.9]">No verdict</h1>
-                  <p className="mt-3 text-base">{session.error}</p>
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <BrutalButton tone="paper" cursor="retry" onClick={() => requestDebate(session.idea)}>
-                      Try again
-                    </BrutalButton>
-                    <BrutalButton tone="sage" cursor="demo" onClick={() => requestDebate(session.idea, true)}>
-                      Run demo debate
-                    </BrutalButton>
-                    <BrutalLink href="/#pitch" tone="ink" cursor="edit">
-                      Edit idea
-                    </BrutalLink>
-                  </div>
+          <AnimatePresence>
+            {engine && started && (
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: fromCache ? 0 : 0.25 }}
+                className="mt-10 grid gap-8 lg:grid-cols-2"
+              >
+                {/* Stage */}
+                <div className="lg:sticky lg:top-24 lg:self-start">
+                  <Roundtable
+                    title={session?.title ?? null}
+                    total={total}
+                    verdict={debate}
+                    line={line}
+                    index={snap.index}
+                    speaking={snap.status === "playing"}
+                    progress={engine.progress}
+                    done={done}
+                  />
                 </div>
-              )}
 
-              {engine && started && lines.length > 0 && (
-                <>
+                {/* Side */}
+                <div className="flex flex-col gap-6 [&>*]:shrink-0">
+                  {!done && <Caption line={line} index={snap.index} progress={engine.progress} emptyText={waitingText} />}
                   <Controls engine={engine} snap={snap} total={total} />
                   <Transcript lines={lines} index={snap.index} complete={snap.complete} onJump={(i) => engine.jumpTo(i)} />
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {debate && done && (
+          {debate && done && sharkScore !== null && (
             <div className="mt-20">
               <Scorecard
                 debate={debate}
+                sharkScore={sharkScore}
+                feed={feed}
+                final={final}
                 review={review}
                 judgmentId={session?.source === "gemma" ? loadJudgmentId() : null}
-                onRetryReview={session ? () => requestReview(session.idea) : undefined}
+                onRetryReview={session && !session.demo ? () => requestReview(session.idea) : undefined}
                 onReplay={() => {
                   engine?.jumpTo(0);
-                  if (lenis) lenis.scrollTo(0, { duration: 1.2 });
+                  if (lenis) lenis.scrollTo(0, { duration: 1.4, easing: easeInOutCubic });
                   else window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                onJoinCall={() => {
-                  engine?.jumpTo(0);
-                  setCallOpen(true);
                 }}
               />
             </div>
           )}
-          <AnimatePresence>
-            {callOpen && engine && debate && (
-              <CallView
-                engine={engine}
-                snap={snap}
-                debate={debate}
-                onLeave={() => {
-                  engine.skipToEnd();
-                  setCallOpen(false);
-                }}
-              />
-            )}
-          </AnimatePresence>
         </div>
       </main>
     </>
   );
 }
 
-function hashIdea(s: string) {
-  let h = 7;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
+function easeInOutCubic(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 function Controls({ engine, snap, total }: { engine: DebateEngine; snap: PlayerSnapshot; total: number }) {
   const playing = snap.status === "playing";
-  const heard = snap.status === "done" ? total : Math.max(0, Math.min(total, snap.index));
-  const pct = Math.round((heard / total) * 100);
+  const read = snap.status === "done" ? total : Math.max(0, Math.min(total, snap.index));
+  const pct = Math.round((read / total) * 100);
   const label =
     snap.status === "done"
       ? "Debate closed"
       : snap.status === "buffering"
-        ? snap.index >= snap.lines.length
-          ? snap.complete
-            ? "Tallying the scores…"
-            : "Waiting on Gemma…"
-          : "Cueing the next voice…"
+        ? snap.complete
+          ? "Tallying the scores…"
+          : "Waiting on Gemma…"
         : snap.status === "paused"
           ? "Paused"
           : "Live from the table";
@@ -499,16 +525,13 @@ function Controls({ engine, snap, total }: { engine: DebateEngine; snap: PlayerS
         <BrutalButton size="sm" tone="paper" cursor="skip" aria-label="Next argument" onClick={() => engine.next()}>
           ⏭
         </BrutalButton>
-        <BrutalButton size="sm" tone="paper" cursor={snap.muted ? "unmute" : "mute"} onClick={() => engine.setMuted(!snap.muted)}>
-          {snap.muted ? "🔇 Muted" : "🔊 Sound"}
-        </BrutalButton>
         {snap.status !== "done" && snap.complete && (
           <BrutalButton size="sm" tone="ink" cursor="verdict" onClick={() => engine.skipToEnd()} className="ml-auto">
             Skip to verdict
           </BrutalButton>
         )}
       </div>
-      <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-ink/65">Space · ← → · M</p>
+      <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-ink/65">Space · ← →</p>
     </div>
   );
 }

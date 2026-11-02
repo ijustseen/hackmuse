@@ -100,8 +100,8 @@ function waitText(seconds: number): string {
 
 /**
  * `text` matches the routes that answer `{ error: string }`; `coded` matches the ones that
- * answer `{ error: { code, message } }`. A spent daily budget is a 503 so the debate room
- * falls back to captions-only on /api/tts.
+ * answer `{ error: { code, message } }`. A spent daily budget is a 503; the debate room shows the
+ * message, and the feed falls back to a sharks-only grade.
  */
 export function limitResponse(blocked: Blocked, shape: "text" | "coded"): Response {
   const site = blocked.scope === "site";

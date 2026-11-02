@@ -23,9 +23,9 @@ export function Logo({ className = "" }: { className?: string }) {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b-[3px] border-ink bg-teal text-cream">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <Logo className="text-cream [&>span:last-child]:text-cream" />
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 md:flex lg:absolute lg:left-1/2 lg:-translate-x-1/2">
           {NAV.map((n) => (
             <Link
               key={n.href}

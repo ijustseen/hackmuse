@@ -29,12 +29,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "HACKMUSE — throw your hackathon idea to the sharks",
   description:
-    "Five AI sharks argue about your hackathon idea out loud, then tell you which ones it survived and what to fix before the judges see it. Free.",
+    "Five AI sharks argue about your hackathon idea and 30 simulated people from social media react to it. See what survived and what to fix before the judges see it. Free.",
   openGraph: {
     type: "website",
     siteName: "HACKMUSE",
     title: "Throw your hackathon idea to the sharks",
-    description: "Five AI sharks argue about it out loud and tell you what to fix before the judges see it.",
+    description: "Five AI sharks argue about it, 30 people from the feed react, and you see what to fix before the judges do.",
   },
   twitter: { card: "summary_large_image" },
 };

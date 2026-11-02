@@ -35,20 +35,21 @@ function positiveIntFromEnv(name: string, fallback: number): number {
 
 /**
  * Abuse guards for the routes that spend money. `perVisitor` is per client in `windowMs`;
- * `daily` is site-wide per UTC day (characters for tts, requests for the rest).
+ * `daily` is site-wide per UTC day, in requests.
  */
 export function rateRules() {
   return {
     trustedProxyHops: positiveIntFromEnv("TRUSTED_PROXY_HOPS", 1),
-    tts: {
-      perVisitor: positiveIntFromEnv("LIMIT_TTS_PER_VISITOR", 40),
-      windowMs: 10 * 60_000,
-      daily: positiveIntFromEnv("LIMIT_TTS_DAILY_CHARS", 60_000),
-    },
     debate: {
       perVisitor: positiveIntFromEnv("LIMIT_DEBATE_PER_VISITOR", 8),
       windowMs: 60 * 60_000,
       daily: positiveIntFromEnv("LIMIT_DEBATE_DAILY", 300),
+    },
+    // The feed: 3 Gemma calls per run, so its budget sits next to the debate's.
+    feed: {
+      perVisitor: positiveIntFromEnv("LIMIT_FEED_PER_VISITOR", 8),
+      windowMs: 60 * 60_000,
+      daily: positiveIntFromEnv("LIMIT_FEED_DAILY", 300),
     },
     review: {
       perVisitor: positiveIntFromEnv("LIMIT_REVIEW_PER_VISITOR", 6),

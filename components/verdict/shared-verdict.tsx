@@ -1,4 +1,6 @@
 import { JudgeAvatar } from "@/components/judge-avatar";
+import { FeedCard } from "@/components/verdict/feed-card";
+import { FEED_WEIGHT, SHARK_WEIGHT, headlineScore } from "@/lib/feed";
 import { JUDGES, VOTING_JUDGES } from "@/lib/judges";
 import { reviewOverall } from "@/lib/review";
 import { RUBRIC, SURVIVE_AT, gradeFor, survival } from "@/lib/rubric";
@@ -6,9 +8,10 @@ import type { PublicVerdict } from "@/lib/server/db";
 
 /** Read-only verdict for the public share page. No animation and no client code, so it renders fast anywhere. */
 export function SharedVerdict({ verdict }: { verdict: PublicVerdict }) {
-  const { debate, review } = verdict;
+  const { debate, review, feed } = verdict;
   const reviewScore = review ? reviewOverall(review) : null;
-  const overall = reviewScore ?? debate.overall;
+  const sharkScore = reviewScore ?? debate.overall;
+  const overall = headlineScore(sharkScore, feed);
   const grade = gradeFor(overall);
   const reviewRows = reviewScore !== null ? review!.criteria : null;
   const survived = survival(debate.votes);
@@ -28,15 +31,29 @@ export function SharedVerdict({ verdict }: { verdict: PublicVerdict }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]">
-        <div className="relative overflow-hidden border-[3px] border-ink bg-paper p-6 shadow-brutal-lg sm:p-8 lg:self-start">
+        <div className="flex flex-col gap-6 lg:self-start">
+        <div className="relative overflow-hidden border-[3px] border-ink bg-paper p-6 shadow-brutal-lg sm:p-8">
           <div className="bg-grid absolute inset-0 opacity-60" />
           <div className="relative">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">
-              {reviewRows ? "Overall · research-backed review" : "Overall · panel estimate"}
-            </p>
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.25em]">Overall</p>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="font-display text-[clamp(6rem,16vw,10rem)] font-black leading-none tabular-nums">{overall}</span>
               <span className="font-display text-4xl font-black text-ink/40">/100</span>
+            </div>
+            <div className="mb-3 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-wider">
+              <span className="border-2 border-ink bg-coral px-1.5 py-0.5">
+                Sharks {sharkScore} × {Math.round(SHARK_WEIGHT * 100)}%
+              </span>
+              {feed ? (
+                <>
+                  <span>+</span>
+                  <span className="border-2 border-ink bg-mustard px-1.5 py-0.5">
+                    Feed {feed.score} × {Math.round(FEED_WEIGHT * 100)}%
+                  </span>
+                </>
+              ) : (
+                <span className="text-ink/60">· sharks only</span>
+              )}
             </div>
             <p className="mt-2 inline-block -rotate-3 border-[5px] border-double border-coral-deep px-3 py-1 font-display text-4xl font-black uppercase leading-none text-coral-deep">
               {grade.label}
@@ -72,6 +89,8 @@ export function SharedVerdict({ verdict }: { verdict: PublicVerdict }) {
             </div>
           </div>
         </div>
+        {feed && <FeedCard feed={feed} />}
+        </div>
 
         <div className="flex flex-col gap-6">
           <div className="border-[3px] border-ink bg-paper shadow-brutal">
@@ -102,7 +121,7 @@ export function SharedVerdict({ verdict }: { verdict: PublicVerdict }) {
       </div>
 
       <p className="max-w-2xl text-sm leading-snug text-ink/70">
-        Scored by a tank of AI sharks (Gemma 4) from the idea as written. It says nothing about the team, the demo or the polish,
+        Scored by a tank of AI sharks and a simulated feed of 30 people (Gemma 4) from the idea as written. It says nothing about the team, the demo or the polish,
         so treat it as a critique to work with, not a prediction.
       </p>
     </div>

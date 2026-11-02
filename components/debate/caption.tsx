@@ -5,7 +5,7 @@ import { useState } from "react";
 import { JUDGES } from "@/lib/judges";
 import type { DebateLine } from "@/lib/types";
 
-/** Subtitle card: the line types out in sync with the voice; the rest waits in ghost ink. */
+/** Subtitle card: the line types out over its reading time; the rest waits in ghost ink. */
 export function Caption({
   line,
   index,
@@ -47,7 +47,6 @@ export function Caption({
 export function TypedText({ text, progress }: { text: string; progress: MotionValue<number> }) {
   const [count, setCount] = useState(() => Math.round(progress.get() * text.length));
   useMotionValueEvent(progress, "change", (p) => {
-    // Lead the voice slightly so the words never lag behind what you hear.
     const next = Math.min(text.length, Math.round(Math.min(1, p * 1.08) * text.length));
     setCount((c) => (c === next ? c : next));
   });

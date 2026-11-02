@@ -266,6 +266,15 @@ async function* answerText(res: Response): AsyncGenerator<string> {
   }
 }
 
+/** One non-streaming Gemma call; returns every complete JSON object in the answer, in order. */
+export async function gemmaObjects(prompt: string, apiKey: string, maxTokens: number, signal?: AbortSignal): Promise<unknown[]> {
+  const res = await gemmaFetch("generateContent", prompt, apiKey, maxTokens, signal);
+  const data = await res.json();
+  const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
+  const text = parts.filter((p) => !p.thought && p.text).map((p) => p.text).join("");
+  return new JsonObjectScanner().push(text);
+}
+
 async function scoreOnly(idea: string, lines: DebateLine[], apiKey: string, signal?: AbortSignal) {
   const res = await gemmaFetch("generateContent", buildScoresPrompt(idea, lines), apiKey, 1500, signal);
   const data = await res.json();

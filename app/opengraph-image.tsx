@@ -41,7 +41,7 @@ export default async function Image() {
             </div>
           </div>
           <div style={{ display: "flex", marginTop: 34, fontFamily: "Mono", fontSize: 24, color: OG.ink, opacity: 0.75 }}>
-            Five AI sharks argue about it out loud. Find out which ones it survives.
+            Five AI sharks and 30 people from the feed. Find out what it survives.
           </div>
         </div>
         <div

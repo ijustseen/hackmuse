@@ -1,9 +1,9 @@
 import type { CriterionId } from "./rubric";
 
 // The tank: five sharks and the Tank Master who runs it. Each shark stands for one way ideas die.
-// Ids stay as they were (voices, saved verdicts and env overrides key off them); names and roles
+// Ids stay as they were (saved verdicts key off them); names and roles
 // are what people see. Add a judge here (plus an avatar in components/judge-avatar.tsx) and the
-// prompt, roundtable, chat, call and scorecard all pick it up.
+// prompt, roundtable, arena and scorecard all pick it up.
 export type JudgeId = "chair" | "shark" | "builder" | "visionary" | "angel" | "operator";
 export type VotingJudgeId = Exclude<JudgeId, "chair">;
 
@@ -23,11 +23,8 @@ export interface Judge {
   focus: string;
   /** Persona brief handed to Gemma. */
   brief: string;
-  /** What they post when they join the group chat while Gemma writes. */
+  /** What they say as they start circling the idea in the arena. */
   joinLine: string;
-  /** Default ElevenLabs premade voice (see the voice table below); override per judge with ELEVENLABS_VOICE_<ID>. */
-  voiceId: string;
-  voiceName: string;
 }
 
 export const JUDGES: Record<JudgeId, Judge> = {
@@ -44,8 +41,6 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Tank Master, who runs the shark tank. Opens in one line, keeps the sharks on this idea and this hackathon, and closes with the verdict. Measured, dry wit, never rambles. Does not vote.",
     joinLine: "Tank's open. Keep it short.",
-    voiceId: "onwK4e9ZLuTAKqWW03F9",
-    voiceName: "Daniel",
   },
   shark: {
     id: "shark",
@@ -60,8 +55,6 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Market Shark, a skeptical venture capitalist. Goes after ideas nobody would pay for: who pays, how big the market is, why now. Blunt, dry, short sentences.",
     joinLine: "Who pays? Go.",
-    voiceId: "nPczCjzI2devNBz1zQrb",
-    voiceName: "Brian",
   },
   builder: {
     id: "builder",
@@ -76,8 +69,6 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Build Shark, a pragmatic senior engineer. Goes after ideas that can't be built in the time a hackathon gives: which APIs and data it needs, where it breaks. Concrete, names specific tech.",
     joinLine: "Counting the APIs already.",
-    voiceId: "IKne3meq5aSn9XLyUdCD",
-    voiceName: "Charlie",
   },
   visionary: {
     id: "visionary",
@@ -92,8 +83,6 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Novelty Shark, a product designer. Goes after ideas the judges have seen ten times today, and lights up for the one demo moment people remember. Energetic, vivid.",
     joinLine: "Please be original.",
-    voiceId: "cgSgspJ2msm6clMCkdW9",
-    voiceName: "Jessica",
   },
   angel: {
     id: "angel",
@@ -108,8 +97,6 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Story Shark, an early-stage angel investor. Goes after pitches with no story: the founders' unfair advantage, whether anyone would love this, whether it can be said in one breath. Warm but probing.",
     joinLine: "Sorry, late. Who's the team?",
-    voiceId: "XB0fDUnXU5powFXDhCwa",
-    voiceName: "Charlotte",
   },
   operator: {
     id: "operator",
@@ -124,25 +111,8 @@ export const JUDGES: Record<JudgeId, Judge> = {
     brief:
       "the Crowd Shark, a former startup founder who ran growth. Goes after ideas with no way to reach users: the first hundred users, the launch, the channel. Practical, a little impatient.",
     joinLine: "Here. Distribution is my question.",
-    voiceId: "bIHbv24MWmeRgasZH58o",
-    voiceName: "Will",
   },
 };
-
-// Voice table: six premade ElevenLabs voices, spread across gender, accent and age.
-//   chair     Daniel     male    British, mature, broadcaster
-//   shark     Brian      male    American, deep, older, resonant
-//   builder   Charlie    male    Australian, young, casual
-//   visionary Jessica    female  American, young, expressive
-//   angel     Charlotte  female  English-Swedish, mature, warm
-//   operator  Will       male    American, young, upbeat
-// Delivery is pushed apart further by VOICE_SETTINGS in app/api/tts/route.ts.
-const seenVoices = new Map<string, JudgeId>();
-for (const judge of Object.values(JUDGES)) {
-  const clash = seenVoices.get(judge.voiceId);
-  if (clash) throw new Error(`Judges ${clash} and ${judge.id} share ElevenLabs voice ${judge.voiceId}`);
-  seenVoices.set(judge.voiceId, judge.id);
-}
 
 /** Seating order: the Tank Master first (head of the table), then clockwise. */
 export const JUDGE_ORDER: JudgeId[] = ["chair", "shark", "builder", "angel", "visionary", "operator"];

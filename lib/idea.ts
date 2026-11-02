@@ -1,4 +1,5 @@
 import type { GemmaReview } from "@/server/gemma/prompt";
+import type { FeedResult } from "./feed";
 import { CUSTOM_EVENT, PRESETS } from "./hackathons";
 import type { Debate } from "./types";
 
@@ -22,6 +23,7 @@ const IDEA_KEY = "hackmuse:idea";
 const DEBATE_KEY = "hackmuse:debate:v2";
 const HACKATHON_KEY = "hackmuse:hackathon:v2";
 const REVIEW_KEY = "hackmuse:review:v2";
+const FEED_KEY = "hackmuse:feed:v1";
 // The saved verdict this session's debate and review fill in; absent when the database is off.
 const JUDGMENT_KEY = "hackmuse:judgment";
 // Set while this tab is watching the demo, so it does not depend on ?demo=1 surviving navigation.
@@ -54,6 +56,7 @@ export function saveIdea(idea: string, hackathon: Hackathon) {
   storage()?.setItem(HACKATHON_KEY, JSON.stringify(hackathon));
   storage()?.removeItem(DEBATE_KEY);
   storage()?.removeItem(REVIEW_KEY);
+  storage()?.removeItem(FEED_KEY);
   storage()?.removeItem(JUDGMENT_KEY);
   storage()?.removeItem(DEMO_KEY);
 }
@@ -119,6 +122,21 @@ export function loadDebate(idea: string): Debate | null {
     if (!raw) return null;
     const debate = JSON.parse(raw) as Debate;
     return debate.idea === idea ? debate : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveFeed(idea: string, feed: FeedResult) {
+  storage()?.setItem(FEED_KEY, JSON.stringify({ idea, feed }));
+}
+
+export function loadFeed(idea: string): FeedResult | null {
+  try {
+    const raw = storage()?.getItem(FEED_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as { idea: string; feed: FeedResult };
+    return value.idea === idea ? value.feed : null;
   } catch {
     return null;
   }
