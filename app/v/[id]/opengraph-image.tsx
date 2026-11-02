@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { connection } from "next/server";
 import { JUDGES, VOTING_JUDGES } from "@/lib/judges";
-import { FEED_SIZE, headlineScore } from "@/lib/feed";
+import { headlineScore } from "@/lib/feed";
 import { reviewOverall } from "@/lib/review";
 import { gradeFor, survival } from "@/lib/rubric";
 import { getPublicVerdict, readJudgmentId } from "@/lib/server/db";
@@ -155,7 +155,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             </div>
             {feed && (
               <div style={{ display: "flex", marginTop: 22, fontFamily: "Mono", fontSize: 18, letterSpacing: 2 }}>
-                {`FEED · ${feed.counts.share}/${FEED_SIZE} WOULD SHARE`}
+                {`FEED · ${feed.counts.share}/${feed.people.length} WOULD SHARE`}
               </div>
             )}
           </div>

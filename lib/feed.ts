@@ -1,6 +1,7 @@
-// The feed: 30 simulated people from social media who see the idea as a post, react, see each
-// other's posts and react again. Shared by the server (which runs it) and the browser (which draws
-// it). Inspired by crowd-simulation tools; our own, much smaller design: 3 Gemma calls per run.
+// The feed: 100 simulated people from social media who see the idea as a post, react, see each
+// other's loudest posts and react again. Shared by the server (which runs it) and the browser
+// (which draws it). The server runs it as 8 Gemma calls in two parallel phases of 4: each call
+// casts 25 people and their first reaction, then each call lets the same 25 react a second time.
 
 export const PLATFORMS = ["tiktok", "instagram", "x", "linkedin", "reddit"] as const;
 export type Platform = (typeof PLATFORMS)[number];
@@ -47,9 +48,9 @@ export const REACTION_WEIGHT: Record<Reaction, number> = { share: 1, like: 0.6, 
 export const SHARK_WEIGHT = 0.7;
 export const FEED_WEIGHT = 0.3;
 
-export const FEED_SIZE = 30;
+export const FEED_SIZE = 100;
 /** Per platform: this many people the idea is for, the rest are ordinary users of that platform. */
-const TARGET_PER_PLATFORM = 4;
+const TARGET_PER_PLATFORM = 12;
 
 export interface FeedSlot {
   platform: Platform;

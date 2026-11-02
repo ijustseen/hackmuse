@@ -166,3 +166,16 @@ clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets 
 - Gotchas: Windows git bash has no `/usr/bin/time`; a script outside the repo cannot import `@google/genai`; `.agents`
   skill templates produce the 2 lint warnings.
 
+
+## 2026-11-02 — the feed and the tank show
+
+- See DECISIONS F1-F5. ElevenLabs is gone. The feed runs beside the debate and the review; the scorecard and share page
+  show it, the share image adds "FEED · n/100 WOULD SHARE". `supabase/migrations/0002_feed.sql` adds `judgments.feed`
+  (not applied yet; the app reads verdicts without it until it is).
+- The debate room is now one canvas: `components/debate/tank.tsx` + `lib/client/tank-sim.ts` (boids with a spatial grid,
+  sharks on springs, a camera pan for the drop and the catch). Removed: roundtable, caption, transcript, debate engine.
+- Verified: demo run at 1440 and 390 (about 30-34 s from drop to verdict, glide lands at 78 px, no horizontal overflow,
+  no console errors); one live pitch through the landing form (53 s to the reveal, 100 people); two live feed runs at
+  about 35-37 s with 0 placeholder people after the spares fix. `next build` passes; `eslint` clean.
+- Watch: live round 2 rarely changes anyone (0-1 of 100). Cached 30-person feeds from before this change still render
+  (cards count the feed's own people), but their tank colours only 30 fish.

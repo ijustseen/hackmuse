@@ -11,7 +11,7 @@ import { JUDGES, JUDGE_ORDER, VOTING_JUDGES } from "@/lib/judges";
 import { RUBRIC, SURVIVE_AT, gradeFor, survival } from "@/lib/rubric";
 import type { GemmaReview, ReviewState } from "@/lib/review";
 import type { Debate } from "@/lib/types";
-import type { FeedProgress } from "./arena";
+import type { FeedProgress } from "./tank";
 
 function summary(d: Debate, review: GemmaReview | null, feed: FeedResult | null) {
   const grade = gradeFor(d.overall);
@@ -20,7 +20,7 @@ function summary(d: Debate, review: GemmaReview | null, feed: FeedResult | null)
     : RUBRIC.map((c) => `• ${c.label}: ${d.scores[c.id]?.score ?? "—"}/10 — ${d.scores[c.id]?.note ?? ""}`);
   return [
     `HACKMUSE verdict — "${d.title}": ${d.overall}/100 (${grade.label}). ${survival(d.votes).line}.`,
-    ...(feed ? [`Feed: ${feed.counts.share} of ${FEED_SIZE} would share (${feed.score}/100).`] : []),
+    ...(feed ? [`Feed: ${feed.counts.share} of ${feed.people.length} would share (${feed.score}/100).`] : []),
     ...criteria,
     ...(review?.similarProjects.length
       ? [`Similar projects: ${review.similarProjects.map((p) => (p.url ? `${p.name} (${p.url})` : p.name)).join("; ")}`]
@@ -280,12 +280,14 @@ export function Scorecard({
         </div>
       </motion.div>
 
+      <FullDebate lines={debate.lines} />
+
       <div className="mt-8 flex flex-wrap gap-4">
         <BrutalLink href="/#pitch" size="lg" cursor="new">
           Grade another idea →
         </BrutalLink>
         <BrutalButton tone="paper" size="lg" cursor="replay" onClick={onReplay}>
-          ↺ Replay debate
+          ↺ Replay the show
         </BrutalButton>
         <BrutalButton
           tone="sage"
@@ -498,5 +500,33 @@ function ListCard({ title, tone, mark, items }: { title: string; tone: string; m
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Everything the sharks said, folded away: the show only surfaced each shark's sharpest line. */
+function FullDebate({ lines }: { lines: Debate["lines"] }) {
+  if (lines.length === 0) return null;
+  return (
+    <details className="group mt-6 border-[3px] border-ink bg-ink text-cream shadow-brutal">
+      <summary
+        data-cursor="open"
+        className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.25em] [&::-webkit-details-marker]:hidden"
+      >
+        <span>Read the full debate · {lines.length} bites</span>
+        <span aria-hidden className="transition-transform group-open:rotate-45">+</span>
+      </summary>
+      <ol className="space-y-3 border-t-2 border-cream/20 p-4 font-mono text-[12.5px] leading-relaxed">
+        {lines.map((l, i) => (
+          <li key={i}>
+            <span className="text-cream/40">[{String(i + 1).padStart(2, "0")}]</span>{" "}
+            <span className="font-bold" style={{ color: JUDGES[l.speaker].color }}>
+              {JUDGES[l.speaker].name.replace("The ", "").toUpperCase()}
+            </span>
+            {l.replyTo && <span className="text-cream/40"> → {JUDGES[l.replyTo].name.replace("The ", "").toLowerCase()}</span>}
+            <span className="text-cream/40"> ›</span> <span>{l.text}</span>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }

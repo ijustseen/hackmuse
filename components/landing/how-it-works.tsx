@@ -70,7 +70,7 @@ const STEPS: StackItem[] = [
   {
     kicker: "Step 02",
     title: "Watch them circle",
-    body: "Five sharks circle on one side, a school of 30 people from social media on the other. Gemma 4 writes the sharks' argument and runs the crowd. The first bite lands within seconds.",
+    body: "Your pitch drops into the tank. Five sharks toss it around while a school of 100 people from social media swims past and reacts. Then the idea is reeled out with its score.",
     color: "var(--mustard)",
     art: TableArt,
   },

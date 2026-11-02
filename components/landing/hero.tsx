@@ -69,7 +69,7 @@ export function Hero() {
           {/* The largest text on a phone: it moves in but is never invisible, so it paints at once. */}
           <p style={delay(0.3)} className="anim-nudge mt-10 max-w-lg text-lg leading-relaxed text-ink/80"
           >
-            Pitch it in a few sentences. Five AI sharks tear into it while 30 simulated people from social media decide whether they{" "}
+            Pitch it in a few sentences. Five AI sharks tear into it while 100 simulated people from social media decide whether they{" "}
             <em className="font-semibold not-italic text-ink underline decoration-coral decoration-4 underline-offset-4">
               would share it
             </em>

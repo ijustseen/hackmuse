@@ -1,5 +1,4 @@
 import {
-  FEED_SIZE,
   FEED_WEIGHT,
   PLATFORM_LABEL,
   REACTIONS,
@@ -17,10 +16,12 @@ import {
  */
 export function FeedCard({ feed, showAll = false }: { feed: FeedResult; showAll?: boolean }) {
   const quotes = feed.best.filter((q) => q.line);
+  // Older verdicts had a smaller feed, so count the people this one actually has.
+  const size = feed.people.length || 1;
   return (
     <div className="border-[3px] border-ink bg-paper shadow-brutal">
       <div className="flex items-center justify-between gap-3 border-b-[3px] border-ink bg-teal-deep px-4 py-2 text-cream">
-        <span className="font-mono text-xs font-bold uppercase tracking-[0.25em]">The feed · {FEED_SIZE} people</span>
+        <span className="font-mono text-xs font-bold uppercase tracking-[0.25em]">The feed · {size} people</span>
         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-cream/70">
           {feed.source === "demo" ? "Demo" : `${Math.round(FEED_WEIGHT * 100)}% of the grade`}
         </span>
@@ -29,7 +30,7 @@ export function FeedCard({ feed, showAll = false }: { feed: FeedResult; showAll?
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
           <p className="font-display text-4xl font-black uppercase leading-none sm:text-5xl">
-            {feed.counts.share} of {FEED_SIZE} <span className="text-ink/45">would share</span>
+            {feed.counts.share} of {size} <span className="text-ink/45">would share</span>
           </p>
           <p className="font-display text-3xl font-black tabular-nums">
             {feed.score}
@@ -48,7 +49,7 @@ export function FeedCard({ feed, showAll = false }: { feed: FeedResult; showAll?
             <span
               key={r}
               className="h-full border-r-2 border-ink last:border-r-0"
-              style={{ width: `${(feed.counts[r] / FEED_SIZE) * 100}%`, backgroundColor: REACTION_COLOR[r] }}
+              style={{ width: `${(feed.counts[r] / size) * 100}%`, backgroundColor: REACTION_COLOR[r] }}
             />
           ))}
         </div>

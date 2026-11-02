@@ -3,7 +3,7 @@ import type { CriterionId } from "./rubric";
 // The tank: five sharks and the Tank Master who runs it. Each shark stands for one way ideas die.
 // Ids stay as they were (saved verdicts key off them); names and roles
 // are what people see. Add a judge here (plus an avatar in components/judge-avatar.tsx) and the
-// prompt, roundtable, arena and scorecard all pick it up.
+// prompt, the tank and the scorecard all pick it up.
 export type JudgeId = "chair" | "shark" | "builder" | "visionary" | "angel" | "operator";
 export type VotingJudgeId = Exclude<JudgeId, "chair">;
 
