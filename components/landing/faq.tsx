@@ -13,16 +13,12 @@ const FAQ = [
     a: "Yes, grading your own ideas is free. We're building a paid version for hackathon organizers; if you run one, join the waitlist at the bottom of the page.",
   },
   {
-    q: "Which AI is behind it?",
-    a: "Gemma 4, Google's open-weight model, writes the debate and the panel's scores, and plays the 100 people in the feed. A second, slower Gemma pass compares your idea with past hackathon projects and scores the eight criteria 0–100.",
-  },
-  {
     q: "Does a high score mean I'll win?",
     a: "No. It means the idea, as you wrote it, held up against five tough critics. Treat it as the hardest feedback you'll get before the real judges, not as a forecast.",
   },
   {
     q: "Who sees my idea?",
-    a: "To run the panel, your text goes to Google's Gemma API. We store the idea and its verdict so a share link can work, but nobody else can read it unless you press Share. Shared links are hidden from search engines.",
+    a: "To run the panel, your text is sent to Google's AI service. We store the idea and its verdict so a share link can work, but nobody else can read it unless you press Share. Shared links are hidden from search engines.",
   },
   {
     q: "Can I use my hackathon's real rules?",
@@ -30,7 +26,7 @@ const FAQ = [
   },
   {
     q: "Who are the 100 people in the feed?",
-    a: "Simulated, not real. Gemma writes 100 personas across TikTok, Instagram, X, LinkedIn and Reddit, mostly people your idea is for plus some who are not. They react, see each other's posts and react again. The feed counts for 30% of the grade; the sharks count for 70%.",
+    a: "Simulated, not real. AI writes 100 personas across TikTok, Instagram, X, LinkedIn and Reddit, mostly people your idea is for plus some who are not. They react, see each other's posts and react again. The feed counts for 30% of the grade; the sharks count for 70%.",
   },
   {
     q: "Why sharks?",

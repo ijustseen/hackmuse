@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       } catch (err) {
         console.error("[debate] Gemma failed:", err);
         if (!request.signal.aborted) {
-          send({ type: "error", message: "The judges couldn't reach a verdict (the Gemma call failed). Try again." });
+          send({ type: "error", message: "The judges couldn't reach a verdict. Try again." });
         }
       } finally {
         controller.close();

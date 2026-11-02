@@ -121,7 +121,7 @@ export function SharedVerdict({ verdict }: { verdict: PublicVerdict }) {
       </div>
 
       <p className="max-w-2xl text-sm leading-snug text-ink/70">
-        Scored by a tank of AI sharks and a simulated feed of 30 people (Gemma 4) from the idea as written. It says nothing about the team, the demo or the polish,
+        Scored by a tank of AI sharks and a simulated social-media feed, from the idea as written. It says nothing about the team, the demo or the polish,
         so treat it as a critique to work with, not a prediction.
       </p>
     </div>

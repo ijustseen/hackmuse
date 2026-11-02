@@ -314,9 +314,9 @@ export function DebateRoom() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <Logo className="[&>span:last-child]:text-cream" />
           <div className="flex items-center gap-2">
-            {session?.source && (
+            {session?.source === "demo" && (
               <span className="hidden border-2 border-cream/40 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-widest sm:inline-block">
-                {session.source === "gemma" ? `Gemma · ${session.model}` : "Demo mode"}
+                Demo mode
               </span>
             )}
             <BrutalLink href="/#pitch" size="sm" cursor="new">

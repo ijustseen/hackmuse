@@ -39,7 +39,7 @@ export function SiteFooter() {
       <div className="relative border-t-[3px] border-ink bg-ink px-4 py-4 text-cream sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 font-mono text-[11px] uppercase tracking-widest">
           <span>Built at Hacktoberfest Hack Day · Linz · 2026</span>
-          <span>Gemma 4 argues · UI bits from ui-layouts.com</span>
+          <span>UI bits from ui-layouts.com</span>
         </div>
       </div>
     </footer>

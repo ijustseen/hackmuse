@@ -350,8 +350,8 @@ function ReviewNotice({ review, onRetry }: { review: ReviewState; onRetry?: () =
         </p>
         <p className="mt-1 text-sm leading-snug">
           {loading
-            ? "Gemma is searching past hackathons and scoring 8 criteria. The scores below are the panel's estimate until it lands."
-            : `Unavailable: ${review.status === "failed" ? review.message : ""} Showing the panel's own scores.`}
+            ? "We're checking your idea against past hackathon projects and scoring 8 criteria. The scores below are the panel's estimate until it lands."
+            : "Couldn't finish this time. Showing the panel's own scores; try again in a few seconds."}
         </p>
       </div>
       {!loading && onRetry && (
@@ -368,10 +368,6 @@ function ReviewCriteria({ review, shown }: { review: GemmaReview; shown: boolean
     <div className="border-[3px] border-ink bg-paper shadow-brutal">
       <div className="flex items-center justify-between gap-3 border-b-[3px] border-ink bg-teal px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.25em] text-cream">
         <span>Criteria breakdown</span>
-        <span className="text-[10px] tracking-widest text-cream/70">
-          Gemma · {review.model}
-          {review.search === "returned" ? " · Google Search" : " · no search"}
-        </span>
       </div>
       {review.missing && (
         <p className="border-b-2 border-dashed border-ink/25 bg-cream px-4 py-2 text-xs leading-snug text-ink/70">

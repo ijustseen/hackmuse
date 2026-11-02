@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       } catch (err) {
         console.error("[feed] Gemma failed:", err);
         if (!request.signal.aborted) {
-          send({ type: "error", message: "The feed went quiet (the Gemma call failed). The grade uses the sharks alone." });
+          send({ type: "error", message: "The feed went quiet. The grade uses the sharks alone." });
         }
       } finally {
         controller.close();

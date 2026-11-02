@@ -179,3 +179,5 @@ clicks leave a ripple. Scrolling re-hit-tests under a still pointer so brackets 
   about 35-37 s with 0 placeholder people after the spares fix. `next build` passes; `eslint` clean.
 - Watch: live round 2 rarely changes anyone (0-1 of 100). Cached 30-person feeds from before this change still render
   (cards count the feed's own people), but their tank colours only 30 fish.
+- 2026-11-02 later: `0002_feed.sql` applied in the Supabase SQL editor (`feed | jsonb` confirmed); a live pitch afterwards
+  saved its feed (100 people, score 49). Model names removed from the UI (DECISIONS F6).

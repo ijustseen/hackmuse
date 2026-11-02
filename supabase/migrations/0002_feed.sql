@@ -1,4 +1,4 @@
--- 0002_feed: store the feed (30 simulated social-media reactions) with each judgment.
+-- 0002_feed: store the feed (100 simulated social-media reactions) with each judgment.
 --
 -- What:   one nullable jsonb column, judgments.feed, holding a FeedResult (lib/feed.ts).
 -- Why:    the grade is now sharks 70% + feed 30% (docs/DECISIONS.md F2), and the share page shows the feed's
@@ -11,7 +11,7 @@
 alter table public.judgments add column if not exists feed jsonb; -- FeedResult; null until the feed finishes
 
 comment on column public.judgments.feed is
-  'FeedResult (lib/feed.ts): 30 simulated people, both rounds, counts, score 0-100. Written once by /api/feed.';
+  'FeedResult (lib/feed.ts): 100 simulated people, both rounds, counts, score 0-100. Written once by /api/feed.';
 
 -- RLS is already on with no policies (0001), so the new column is as locked as the rest of the row.
 

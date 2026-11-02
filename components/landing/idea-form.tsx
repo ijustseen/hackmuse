@@ -215,7 +215,7 @@ export function IdeaForm() {
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <p className="max-w-[16rem] font-mono text-[11px] uppercase leading-relaxed tracking-wider text-ink/70">
-                Gemma&nbsp;4 · 5 sharks + 100 people · free
+                5 sharks + 100 people · free
               </p>
               <Magnetic>
                 <BrutalButton type="submit" size="lg" cursor="throw" disabled={submitting}>

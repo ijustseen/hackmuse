@@ -100,7 +100,7 @@ export function FeedCard({ feed, showAll = false }: { feed: FeedResult; showAll?
         )}
 
         <p className="mt-5 text-xs leading-snug text-ink/60">
-          Simulated people, written by Gemma: a gut check on how a feed might take the idea, not a survey.
+          Simulated people, written by AI: a gut check on how a feed might take the idea, not a survey.
         </p>
       </div>
     </div>
